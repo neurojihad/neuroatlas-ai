@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+reports/
+
+# Env / secrets
+infra/.env
+.env
+
+# ML artifacts / data (track via DVC, not git)
+data/
+models/
+*.pkl
+*.joblib
+
+# IDE / OS
+.DS_Store
