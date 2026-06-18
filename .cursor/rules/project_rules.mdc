@@ -1,0 +1,235 @@
+---
+
+## alwaysApply: true
+
+# Priority Rule
+
+Project-specific rules take precedence over generic engineering principles.
+
+When DRY, SOLID, KISS, PEP8, or Clean Architecture conflict,
+prefer the solution that is most consistent with the existing codebase.
+
+---
+
+# Understand Before Changing
+
+Before modifying code:
+
+1. Read the entire file.
+2. Read related files.
+3. Identify the existing implementation pattern.
+4. Follow the existing pattern.
+
+Do not introduce a new pattern when an equivalent pattern already exists.
+
+---
+
+# Minimal Changes Rule
+
+Implement the smallest change that fully solves the task.
+
+Do not:
+
+* Refactor unrelated code.
+* Rename files unnecessarily.
+* Modify unrelated modules.
+* Introduce architectural changes without request.
+
+Keep changes focused on the requested task.
+
+---
+
+# Documentation Standards
+
+All classes must contain a class-level docstring.
+
+All public methods and functions must contain a docstring.
+
+Private methods should contain a docstring when their purpose is not obvious.
+
+Docstrings must explain:
+
+* Purpose
+* Parameters
+* Return value (if applicable)
+* Raised exceptions (if applicable)
+
+Example:
+
+```python
+class UserService:
+    """Service responsible for user-related operations."""
+
+    def get_user(self, user_id: int) -> User:
+        """
+        Retrieve a user by identifier.
+
+        Args:
+            user_id: Unique user identifier.
+
+        Returns:
+            User instance.
+
+        Raises:
+            UserNotFoundError: If user does not exist.
+        """
+```
+
+---
+
+# Type Hints
+
+All functions, methods, and class attributes must use type hints whenever possible.
+
+Avoid untyped parameters and return values.
+
+Prefer explicit types over Any.
+
+---
+
+# Blank Line Formatting
+
+After every class definition and every method definition docstring,
+insert exactly one blank line before the implementation starts.
+
+Example:
+
+```python
+class UserService:
+    """User service."""
+
+    def get_user(self, user_id: int) -> User:
+        """Retrieve user by id."""
+
+        user = self.repository.get(user_id)
+        return user
+```
+
+---
+
+# Code Readability
+
+Prefer self-documenting code.
+
+Use meaningful names for:
+
+* classes
+* methods
+* variables
+* constants
+
+Avoid comments that merely repeat the code.
+
+Use comments only to explain:
+
+* business rules
+* non-obvious decisions
+* workarounds
+* technical constraints
+
+Prefer docstrings over inline comments.
+
+---
+
+# Engineering Principles
+
+All code changes must follow the principles below.
+
+## DRY (Don't Repeat Yourself)
+
+* Avoid duplicated business logic.
+* Reuse existing implementations whenever possible.
+* Extract repeated logic into shared methods, services, or utilities.
+* Maintain a single source of truth for the same behavior.
+
+When similar business logic appears in 2 or more locations,
+consider extracting it into a shared implementation.
+
+When similar business logic appears in 3 or more locations,
+extraction is strongly recommended.
+
+Apply DRY pragmatically.
+
+Do not introduce abstractions for one-time code.
+
+---
+
+## SOLID
+
+Follow SOLID principles where they improve maintainability.
+
+Especially:
+
+* Single Responsibility Principle (SRP)
+* Dependency Inversion Principle (DIP)
+
+Avoid creating unnecessary interfaces, inheritance hierarchies, or abstractions solely to satisfy SOLID.
+
+---
+
+## KISS (Keep It Simple)
+
+Prefer the simplest solution that solves the problem.
+
+Avoid:
+
+* overengineering
+* excessive abstraction
+* speculative design
+* unnecessary design patterns
+
+Simple and readable code is preferred over clever code.
+
+---
+
+## PEP 8
+
+All Python code must comply with PEP 8.
+
+Requirements:
+
+* Meaningful naming
+* Proper spacing
+* Consistent formatting
+* Type hints whenever possible
+* Clear imports
+* Maximum readability
+
+---
+
+## Clean Architecture
+
+Respect project architecture boundaries.
+
+Allowed dependency flow:
+
+api -> services
+
+services -> repositories
+
+repositories -> database
+
+Business logic belongs in services.
+
+Database access belongs in repositories.
+
+HTTP concerns belong in API layer only.
+
+Forbidden:
+
+* api -> repositories
+* repositories -> services
+* repositories -> api
+
+---
+
+# Investigate First
+
+When fixing bugs:
+
+1. Explain the likely root cause.
+2. Show evidence.
+3. Propose a fix.
+4. Only then modify code.
+
+Never make speculative changes without identifying the cause.

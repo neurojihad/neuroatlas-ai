@@ -1,0 +1,71 @@
+---
+alwaysApply: true
+description: always when do you need to find file in repo
+---
+
+# Project Structure
+
+NeuroAtlas AI is a research-phase Clinical Decision Support System for pediatric
+neurorehabilitation. Code lives in the `neuroatlas-ai/` subdirectory, not the repo root.
+
+> `neuroatlas-ai/ARCHITECTURE.md` describes a **proposed/future** layout
+> (apps/, services/, pipelines/...). It is aspirational — the **actual** code
+> follows the hexagonal layout below. Trust the code, not section 6 of that doc.
+
+## Layout
+
+```
+neuroatlas-ai/
+├── pyproject.toml          # Poetry, Python 3.12, dependency groups per service
+├── Makefile                # run/test/lint entrypoints (see commands below)
+├── docker-compose.yml      # postgres (pgvector) + patients + ml
+├── infra/.env.example      # env template; copy to infra/.env via `make init`
+└── src/
+    ├── common/             # shared library used by every service
+    │   ├── application/     # app_factory (FastAPI builder), logging, settings
+    │   ├── core/            # Command/CommandResult base, exceptions, ports (uow)
+    │   └── http/            # error_handlers, ResponseSchema/ListResponseSchema
+    ├── patients/           # clinical-data service (FastAPI, port 8001)
+    └── ml/                 # prediction service (FastAPI, port 8002)
+```
+
+## Service module pattern (hexagonal / ports & adapters)
+
+Each service (`patients`, `ml`) follows the same structure:
+
+```
+<service>/
+├── main.py             # builds app via common.application.app_factory.create(...)
+├── lifespan.py         # startup/shutdown wiring of adapters
+├── settings.py         # service-specific settings
+├── domain/             # pure business logic, no framework imports
+│   ├── entities.py      # dataclasses (e.g. Patient, Assessment)
+│   ├── commands.py      # write use-cases (Command subclasses w/ nested Context)
+│   ├── queries.py       # read use-cases
+│   ├── exceptions.py
+│   └── ports/           # abstract interfaces (repositories, uow, predictor)
+├── adapters/           # concrete implementations of ports
+│   ├── http/            # FastAPI router (handlers.py), schemas, dependencies
+│   ├── database/        # repos / unit-of-work (e.g. in_mem.py)
+│   └── predictor/       # ml-only: baseline.py
+└── tests/              # mirrors source tree (test_domain/...)
+```
+
+## Conventions
+
+- **Layering:** `adapters` depend on `domain`; `domain` never imports adapters or
+  FastAPI. Cross-cutting concerns live in `common`.
+- **Write path:** HTTP handler builds a `Command.Context`, runs `Command(uow, ctx).execute()`,
+  returns `ResponseSchema`. Validation goes in `Context.validate_context()`.
+- **Read path:** handler calls a function in `domain/queries.py` with the `uow`.
+- **Persistence:** access via Unit of Work port (`domain/ports/uow.py`); current
+  adapter is in-memory. IDs are ULID-based with prefixes (`pat_`, `asm_`).
+- **Schemas:** Pydantic for HTTP I/O (`adapters/http/schemas.py`); domain uses dataclasses.
+- **Tests:** pytest under `src/<service>/tests/`, mirroring the module path.
+
+## Common commands (run from `neuroatlas-ai/`)
+
+- `make run_patients` / `make run_ml` — run a service locally (in-memory, no infra)
+- `make test` / `make test_patients` / `make test_ml` — pytest
+- `make lint` (ruff + mypy), `make fmt` (isort + ruff format), `make check` — fmt+lint+test
+- `make up` / `make down` — docker compose infra
