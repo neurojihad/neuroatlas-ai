@@ -79,32 +79,47 @@ narrative claim is paired with a citation.
 
 ## 3. Components
 
-### 3.1 Web App (Frontend)
+### 3.1 Web App (Frontend) — *planned*
 - **Stack:** Next.js (App Router), React, TypeScript, Tailwind, TanStack Query.
 - **Responsibilities:** assessment entry forms, prediction + SHAP visualization
   (waterfall/force plots), evidence panel with citations, session history.
 - **Auth:** OIDC (e.g. Auth0/Keycloak); role-based (clinician, researcher, admin).
 
-### 3.2 API Gateway (Backend)
+### 3.2 API Gateway (Backend) — *planned*
 - **Stack:** FastAPI + Pydantic v2, Uvicorn/Gunicorn.
 - **Responsibilities:** request validation, authn/z, rate limiting, audit
   logging, request fan-out/orchestration, response assembly.
 - **Cross-cutting:** structured logging, OpenTelemetry tracing, error envelope.
 
-### 3.3 ML Service
-- **Stack:** Python, scikit-learn, **XGBoost** (baseline), **SHAP** (explainability).
-- **Endpoints:** `POST /predict` → `{outcome, probability, shap_values}`.
-- **Models:** outcome prediction, rehab-progress trajectory, risk stratification.
-- **Lifecycle:** training pipeline (offline) → model registry → served as artifact.
-- **Targets (examples):** GMFCS level change, MACS change, goal attainment.
+### 3.3 Patients Service (Clinical Data) — *implemented*
+- **Stack:** FastAPI + Pydantic; hexagonal layers (see §6.1).
+- **Endpoints:** `POST /api/v1/patients`, `GET /api/v1/patients[/{id}]`,
+  `POST|GET /api/v1/patients/{id}/assessments`.
+- **Domain:** `Patient` (surrogate id, birth *year* only), `Assessment`
+  (GMFCS, MACS, Modified Ashworth, ROM, clinical note) with scale validation.
+- **Persistence:** in-memory adapter today (runs with zero infra); Postgres
+  (SQLAlchemy) adapter behind the same ports is the next step.
 
-### 3.4 RAG Service
+### 3.4 ML Service — *implemented (baseline)*
+- **Stack:** Python, FastAPI. Trained models will use **XGBoost** + **SHAP**;
+  the scaffold ships a transparent linear baseline behind an `OutcomePredictor`
+  port so the predict→attribute contract is exercisable without native wheels.
+- **Endpoints:** `POST /api/v1/predict` → `{target, probability, label,
+  model_version, baseline, attributions[]}`.
+- **Explainability:** every response carries SHAP-style per-feature
+  attributions + the model baseline (exact for the linear baseline; identical
+  contract once XGBoost+SHAP lands).
+- **Targets (examples):** GMFCS level improvement, goal attainment.
+- **Lifecycle:** training pipeline (offline) → model registry → loaded into the
+  predictor adapter; domain/HTTP untouched on model swap.
+
+### 3.5 RAG Service — *planned*
 - **Stack:** Python, sentence-transformers / BGE embeddings, vector DB.
 - **Endpoints:** `POST /search` → ranked passages + source metadata.
 - **Pipeline:** ingest → clean → chunk → embed → index; query → retrieve →
   re-rank (cross-encoder) → return with provenance.
 
-### 3.5 LLM Orchestrator
+### 3.6 LLM Orchestrator — *planned*
 - **Stack:** LangChain or LlamaIndex; provider-agnostic adapter
   (OpenAI / Anthropic / local vLLM).
 - **Responsibilities:** prompt templating, context assembly (ML + RAG),
@@ -112,7 +127,7 @@ narrative claim is paired with a citation.
 - **Pattern:** retrieval-grounded generation with **mandatory inline citations**;
   no claim without a source.
 
-### 3.6 Ingestion Pipelines
+### 3.7 Ingestion Pipelines — *planned*
 - PubMed E-utilities + guideline PDFs → parse → de-dup → chunk → embed → upsert.
 - Scheduled (Airflow/Prefect or cron) with snapshot versioning for reproducibility.
 
@@ -160,30 +175,73 @@ Core entities (de-identified):
 
 ---
 
-## 6. Proposed Repository Structure
+## 6. Repository Structure
+
+A single Poetry monorepo with a `src/<service>/` layout and per-service
+dependency groups (pattern adapted from the `paymentgate` service). `✓` = in the
+repo today, `▢` = planned.
 
 ```
 neuroatlas-ai/
 ├── README.md
 ├── ARCHITECTURE.md
-├── docker-compose.yml
-├── apps/
-│   └── web/                  # Next.js frontend
-├── services/
-│   ├── gateway/              # FastAPI API gateway
-│   ├── ml/                   # training + serving (XGBoost/SHAP)
-│   ├── rag/                  # retrieval service
-│   └── llm/                  # LLM orchestrator
-├── pipelines/
-│   ├── ingestion/            # PubMed/guideline ingestion
-│   └── training/             # ML training DAGs
-├── packages/
-│   └── schemas/              # shared Pydantic/TS types (contracts)
-├── data/                     # DVC-tracked (gitignored payloads)
-├── notebooks/                # research & EDA
-├── infra/                    # IaC, k8s manifests, CI/CD
-└── docs/                     # ADRs, data dictionary, model cards
+├── pyproject.toml            # ✓ Poetry, per-service dep groups, ruff/mypy/pytest
+├── Makefile                  # ✓ run/lint/test/fmt targets
+├── docker-compose.yml        # ✓ postgres(pgvector) + patients + ml
+├── infra/
+│   └── .env.example          # ✓ local config template
+└── src/
+    ├── common/               # ✓ app factory, settings, logging,
+    │                         #   core ports (Command, UnitOfWork), http schemas
+    ├── patients/             # ✓ clinical data service (hexagonal)
+    ├── ml/                   # ✓ outcome prediction service (hexagonal)
+    ├── rag/                  # ▢ retrieval service (same skeleton)
+    ├── llm/                  # ▢ LLM orchestrator (same skeleton)
+    ├── gateway/              # ▢ API gateway / orchestrator
+    └── housekeeper/          # ▢ Alembic migrations (centralized)
 ```
+
+Future additions matching §2: `apps/web/` (Next.js), `pipelines/`
+(ingestion + training), `notebooks/`, `docs/` (ADRs, data dictionary, model
+cards), and DVC-tracked `data/` / `models/` (gitignored payloads).
+
+### 6.1 Service internal architecture (hexagonal / ports & adapters)
+
+Every service follows the same layering so the domain never depends on
+frameworks or I/O:
+
+```
+src/<service>/
+├── main.py                   # FastAPI app built via common app factory
+├── settings.py               # dataclass Settings subclass
+├── lifespan.py               # startup/shutdown, wires adapters into app.state
+├── Dockerfile
+├── domain/                   # pure business logic (no FastAPI / DB imports)
+│   ├── entities.py           # dataclasses / enums
+│   ├── commands.py           # writes: Command + frozen Context + execute()
+│   ├── queries.py            # reads
+│   ├── exceptions.py
+│   └── ports/                # abstract interfaces the domain depends on
+│       ├── repositories.py   #   (patients) persistence ports
+│       ├── uow.py            #   UnitOfWork transactional boundary
+│       └── predictor.py      #   (ml) model port
+├── adapters/                 # concrete implementations of the ports
+│   ├── database/             # in_mem.py now; postgres.py (SQLAlchemy) next
+│   ├── predictor/            # (ml) baseline.py; xgboost.py later
+│   └── http/                 # handlers.py (routers), schemas.py, dependencies.py
+└── tests/                    # test_domain/, test_adapters/
+```
+
+**Conventions carried over from paymentgate:**
+- **Command pattern** — each write is a `Command` with a frozen `Context`;
+  `validate_context()` runs on construction, business logic in `execute()`.
+- **Unit of Work** — `async with uow:` commits on success / rolls back on error;
+  the concrete UoW lives in `adapters/database`.
+- **Dependency rule** — `domain` imports only `domain` + `common.core`; adapters
+  depend on the domain, never the reverse. Swapping in Postgres or XGBoost
+  touches only `adapters/`.
+- **Response envelope** — `ResponseSchema` / `ListResponseSchema` and a uniform
+  error handler from `common.http`.
 
 ---
 
@@ -221,12 +279,13 @@ architectural concern, not an afterthought.
 
 ## 9. Mapping to the README Roadmap
 
-| Phase | Architectural slice to build |
-|-------|------------------------------|
-| **1 — Research** | Data dictionary, ADRs, dataset datasheets in `docs/` |
-| **2 — RAG MVP** | Ingestion pipeline + RAG service + pgvector + LLM cite-only |
-| **3 — ML MVP** | ML service: XGBoost baseline + SHAP + MLflow registry |
-| **4 — Unified** | Gateway orchestration + Next.js web app + full deployment |
+| Phase | Architectural slice to build | Status |
+|-------|------------------------------|--------|
+| **0 — Scaffold** | Monorepo + hexagonal `common`/`patients`/`ml` (in-mem), tooling | ✓ done |
+| **1 — Research** | Data dictionary, ADRs, dataset datasheets in `docs/` | ▢ |
+| **2 — RAG MVP** | Ingestion pipeline + RAG service + pgvector + LLM cite-only | ▢ |
+| **3 — ML MVP** | ML service: XGBoost + SHAP + MLflow registry (replace baseline) | partial (baseline ✓) |
+| **4 — Unified** | Gateway orchestration + Next.js web app + full deployment | ▢ |
 
 ---
 
@@ -247,7 +306,7 @@ can be finalized:
 
 ---
 
-*Next step suggestion:* scaffold the repository structure in section 6 with
-runnable skeletons (FastAPI gateway, RAG service, docker-compose) so Phase 2 can
-start immediately.
-```
+*Next step suggestions:* (1) add the Postgres SQLAlchemy adapter + Alembic
+migrations for `patients` behind the existing ports; (2) scaffold `rag` and
+`llm` services on the same hexagonal skeleton; (3) add the `gateway`
+orchestrator. The domain and HTTP layers stay untouched as adapters are filled in.
