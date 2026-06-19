@@ -32,11 +32,11 @@ down:
 
 fmt:
 	poetry run isort --profile black src/
-	poetry run ruff format .
+	poetry run ruff format src
 
 fmt_check:
 	poetry run isort --profile black --check src/
-	poetry run ruff format --check
+	poetry run ruff format --check src
 
 lint:
 	poetry run ruff check src

@@ -87,12 +87,14 @@ Prefer explicit types over Any.
 
 ---
 
-# Blank Line Formatting
+# Documentation Formatting
 
-After every class definition and every method definition docstring,
-insert exactly one blank line before the implementation starts.
+After every class docstring and method docstring,
+there must be exactly one blank line before the first executable statement.
 
-Example:
+This rule overrides formatter preferences.
+
+Correct:
 
 ```python
 class UserService:
@@ -101,6 +103,17 @@ class UserService:
     def get_user(self, user_id: int) -> User:
         """Retrieve user by id."""
 
+        user = self.repository.get(user_id)
+        return user
+```
+
+Incorrect:
+
+```python
+class UserService:
+    """User service."""
+    def get_user(self, user_id: int) -> User:
+        """Retrieve user by id."""
         user = self.repository.get(user_id)
         return user
 ```

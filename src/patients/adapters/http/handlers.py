@@ -40,7 +40,7 @@ async def list_patients(
 ) -> ListResponseSchema[PatientSchema]:
     """List patients with offset pagination."""
     patients = await queries.list_patients(limit=limit, offset=offset, uow=uow)
-    return ListResponseSchema[PatientSchema](data=[asdict(p) for p in patients])
+    return ListResponseSchema[PatientSchema](data=[PatientSchema(**asdict(p)) for p in patients])
 
 
 @router_v1.get("/patients/{patient_id}", response_model=ResponseSchema[PatientSchema])
@@ -50,7 +50,7 @@ async def get_patient(
 ) -> ResponseSchema[PatientSchema]:
     """Fetch a single patient by id."""
     patient = await queries.get_patient(patient_id, uow=uow)
-    return ResponseSchema[PatientSchema](data=asdict(patient))
+    return ResponseSchema[PatientSchema](data=PatientSchema(**asdict(patient)))
 
 
 @router_v1.post(
@@ -79,4 +79,4 @@ async def list_assessments(
 ) -> ListResponseSchema[AssessmentSchema]:
     """List all assessments recorded for a patient."""
     items = await queries.list_patient_assessments(patient_id, uow=uow)
-    return ListResponseSchema[AssessmentSchema](data=[asdict(a) for a in items])
+    return ListResponseSchema[AssessmentSchema](data=[AssessmentSchema(**asdict(a)) for a in items])
