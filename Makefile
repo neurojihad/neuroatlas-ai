@@ -20,6 +20,9 @@ run_patients:
 run_ml:
 	poetry run uvicorn ml.main:app --host 0.0.0.0 --port 8002 --reload
 
+run_housekeeper:
+	poetry run uvicorn housekeeper.main:app --host 0.0.0.0 --port 8003 --reload
+
 # Infrastructure (local)
 
 up:
@@ -60,6 +63,17 @@ test_patients:
 
 test_ml:
 	poetry run pytest src/ml --cov=src/ml
+
+test_housekeeper:
+	poetry run pytest src/housekeeper --cov=src/housekeeper
+
+# Migrations (all run through Housekeeper / the repo-root alembic.ini)
+
+migrate:
+	poetry run alembic upgrade head
+
+makemigration:
+	poetry run alembic revision --autogenerate -m "${m}"
 
 test_k:
 	poetry run pytest src -k=${k}

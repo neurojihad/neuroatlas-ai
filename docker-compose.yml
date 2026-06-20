@@ -28,5 +28,27 @@ services:
     ports:
       - "8002:8000"
 
+  housekeeper:
+    build:
+      context: .
+      dockerfile: src/housekeeper/Dockerfile
+    environment:
+      POSTGRES_URI: postgresql+asyncpg://${POSTGRES_USER:-neuroatlas}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-neuroatlas}
+    ports:
+      - "8003:8000"
+    depends_on:
+      - postgres
+
+  migrations:
+    build:
+      context: .
+      dockerfile: src/housekeeper/Dockerfile
+    environment:
+      POSTGRES_URI: postgresql+asyncpg://${POSTGRES_USER:-neuroatlas}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-neuroatlas}
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      - postgres
+    restart: "no"
+
 volumes:
   pg_data:
