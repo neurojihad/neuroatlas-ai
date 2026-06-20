@@ -246,3 +246,134 @@ When fixing bugs:
 4. Only then modify code.
 
 Never make speculative changes without identifying the cause.
+
+---
+
+# Database Migrations
+
+The Housekeeper service is the single owner of all database migrations.
+
+These rules mirror the migration conventions of the paymentgate project.
+
+## Ownership
+
+* All migrations live under `src/housekeeper/migrations/`.
+* All migrations are generated and applied exclusively through Housekeeper.
+* No other service may create, run, or own migrations.
+* `alembic.ini` lives at `src/housekeeper/alembic.ini`.
+
+## Per-service segregation
+
+* Migrations are segregated per service/database into subdirectories:
+  `src/housekeeper/migrations/<service>/`.
+* Each service/database has its own revision history; never mix services in one
+  directory.
+
+## Alembic configuration (multi-database)
+
+* The `[alembic]` section declares every database:
+  `databases = patients, ml, rag` (comma-separated list of all logical DBs).
+* `[DEFAULT]` holds the shared `file_template` and `truncate_slug_length = 60`.
+* Each database has its own section with a per-service version location:
+
+```ini
+[patients]
+sqlalchemy.url = driver://user:pass@localhost/dbname
+version_locations = ./migrations/patients
+```
+
+* Global keys: `prepend_sys_path = .`, `script_location = ./migrations/`,
+  `version_path_separator = os`.
+
+## Migration file naming (mandatory)
+
+* Use the timestamp-prefixed template exactly:
+
+```ini
+file_template = %%(year)d-%%(month).2d-%%(day).2d-%%(hour).2d-%%(minute).2d-%%(second).2d-%%(rev)s_%%(slug)s
+```
+
+* This produces filenames like:
+
+```
+2026-02-03-22-42-50-ced76f42edaa_.py
+```
+
+  i.e. `YYYY-MM-DD-HH-MM-SS-<revision_hash>_<slug>.py` (slug may be empty).
+* Keep `truncate_slug_length = 60`.
+
+## env.py behavior
+
+* Select the active database from the ini section: `db_name = config.config_ini_section`.
+* Import that service's model metadata dynamically and use its `Base.metadata`
+  as `target_metadata`.
+* Read the database URL from settings keyed by db name
+  (e.g. `settings.<db_name>_postgres_uri`), escaping `%` as `%%`.
+* Skip revision generation when there are no changes
+  (`process_revision_directives`), logging a warning.
+* Filter reflected objects not described in the models (`include_object`).
+* Run with the async engine, falling back to a sync engine when greenlet is
+  unavailable (local environment).
+
+## Workflow
+
+* Generate and apply migrations per service by selecting its ini section:
+
+```bash
+alembic -n <service> revision --autogenerate -m "message"
+alembic -n <service> upgrade head
+```
+
+* Wrap these in Housekeeper Make targets; never invoke migrations from another
+  service.
+
+---
+
+# Service lifecycle (Makefile)
+
+Every service is started and stopped through Makefile targets defined in the
+repo-root `Makefile`. Do not document or use ad-hoc `docker compose` / `uvicorn`
+invocations when an equivalent Make target exists.
+
+## Per-service up / down (Docker)
+
+* Bring a single service up: `make up_<abbr>`
+* Tear a single service down: `make down_<abbr>`
+* Each target wraps `docker compose` for that service only (and its declared
+  dependencies, e.g. Postgres when required).
+
+## Service abbreviations (mandatory)
+
+Use these short codes in Make target names:
+
+| Service      | Abbreviation | Up            | Down              |
+|--------------|--------------|---------------|-------------------|
+| patients     | `pat`        | `make up_pat` | `make down_pat`   |
+| ml           | `ml`         | `make up_ml`  | `make down_ml`    |
+| housekeeper  | `hk`         | `make up_hk`  | `make down_hk`    |
+| rag          | `rag`        | `make up_rag` | `make down_rag`   |
+
+When adding a new service, register its abbreviation in this table and add
+matching `up_<abbr>` / `down_<abbr>` targets to the `Makefile`.
+
+## Full stack
+
+* `make up` — start all compose services (Postgres + every app service).
+* `make down` — stop the full compose stack.
+
+Use per-service targets for day-to-day work; use `make up` / `make down` when
+you need the entire environment.
+
+## Local run (no Docker)
+
+* Run a service locally with hot reload: `make run_<service>` (full service name,
+  not abbreviation), e.g. `make run_patients`, `make run_ml`, `make run_housekeeper`.
+* Local run targets use `uvicorn` and do not require Docker; they are for
+  development against in-memory adapters or a locally running Postgres.
+
+## Naming rules
+
+* Docker lifecycle: `up_<abbr>` / `down_<abbr>` (short abbreviation).
+* Local dev server: `run_<service>` (full service directory name).
+* Tests: `test_<service>` (full service directory name).
+* New services must follow all three patterns in the `Makefile`.

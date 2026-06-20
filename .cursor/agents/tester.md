@@ -3,7 +3,6 @@ read_only: false
 name: tester
 model: gpt-5.3-codex[]
 description: Testing specialist. Creates and validates automated tests for implemented functionality.
-readonly: true
 ---
 
 # Tester Agent

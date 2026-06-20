@@ -3,7 +3,6 @@ read_only: true
 name: reviewer
 model: claude-sonnet-4-6[]
 description: Senior code reviewer. Reviews implementation quality, architecture, performance and reliability.
-readonly: true
 ---
 
 # Reviewer Agent

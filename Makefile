@@ -31,6 +31,24 @@ up:
 down:
 	docker compose down
 
+up_pat:
+	docker compose up -d patients
+
+down_pat:
+	docker compose stop patients
+
+up_ml:
+	docker compose up -d ml
+
+down_ml:
+	docker compose stop ml
+
+up_hk:
+	docker compose up -d housekeeper
+
+down_hk:
+	docker compose stop housekeeper
+
 # Lint and format
 
 fmt:
