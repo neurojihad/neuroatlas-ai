@@ -10,9 +10,10 @@ install:
 	poetry install
 
 init:
-	cp infra/.env.example infra/.env
+	@test -f infra/.env || cp infra/.env.example infra/.env
 
 # Run services locally (in-memory adapters, no infra required)
+# Local and compose targets load variables from infra/.env (see -include above).
 
 run_patients:
 	poetry run uvicorn patients.main:app --host 0.0.0.0 --port 8001 --reload
@@ -24,11 +25,12 @@ run_housekeeper:
 	poetry run uvicorn housekeeper.main:app --host 0.0.0.0 --port 8003 --reload
 
 # Infrastructure (local)
-# Infra compose: Postgres + shared network. App compose: patients, ml, housekeeper.
+# Infra compose: Postgres + Kafka + shared network. App compose: patients, ml, housekeeper.
 # Run `make up_infra` before app services; `make up` starts both.
 
-COMPOSE_INFRA = docker compose -f infra/infra.compose.yml
-COMPOSE_APP = docker compose -f infra/application.compose.yml
+COMPOSE_ENV = --env-file infra/.env
+COMPOSE_INFRA = docker compose $(COMPOSE_ENV) -f infra/infra.compose.yml
+COMPOSE_APP = docker compose $(COMPOSE_ENV) -f infra/application.compose.yml
 
 up: up_infra up_app
 
@@ -39,6 +41,12 @@ up_infra:
 
 down_infra:
 	$(COMPOSE_INFRA) down
+
+kafka_topics:
+	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run python infra/kafka/init_topics.py
+
+kafka_logs:
+	docker logs -f kafka_neuroatlas
 
 up_app:
 	$(COMPOSE_APP) up -d --build
@@ -99,6 +107,9 @@ test_ml:
 
 test_housekeeper:
 	poetry run pytest src/housekeeper --cov=src/housekeeper
+
+test_messaging:
+	poetry run pytest src/common/tests/test_bus src/ml/tests/test_adapters
 
 # Migrations (all run through Housekeeper; requires Postgres — run `make up_infra` first)
 

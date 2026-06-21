@@ -20,16 +20,21 @@ there is no longer a `neuroatlas-ai/` subdirectory).
 ├── pyproject.toml          # Poetry, Python 3.12, dependency groups per service
 ├── Makefile                # run/test/lint entrypoints (see commands below)
 ├── infra/
-│   ├── infra.compose.yml       # Postgres + shared network (make up_infra)
+│   ├── infra.compose.yml       # Postgres + Kafka + shared network (make up_infra)
+│   ├── kafka/init_topics.py    # topic bootstrap from EventStream (make kafka_topics)
 │   ├── application.compose.yml # app services (make up_app / up_<abbr>)
-│   └── .env.example            # env template; copy to infra/.env via `make init`
+│   ├── .env                    # runtime config (Makefile + Docker Compose)
+│   └── .env.example            # template only; `make init` copies to .env
 └── src/
     ├── common/             # shared library used by every service
     │   ├── application/     # app_factory (FastAPI builder), logging, settings
-    │   ├── core/            # Command/CommandResult base, exceptions, ports (uow)
+    │   ├── core/            # Command/CommandResult base, exceptions, ports (uow, bus)
+    │   ├── core/entities/   # EventStream, EventKind, Event
+    │   ├── adapters/bus/    # Kafka + in-memory EventBus adapters
     │   └── http/            # error_handlers, ResponseSchema/ListResponseSchema
     ├── patients/           # clinical-data service (FastAPI, port 8001)
-    └── ml/                 # prediction service (FastAPI, port 8002)
+    ├── ml/                 # prediction service (FastAPI, port 8002; Kafka consumer)
+    └── housekeeper/        # migrations & DB ops (FastAPI, port 8003)
 ```
 
 ## Service module pattern (hexagonal / ports & adapters)
@@ -68,7 +73,8 @@ Each service (`patients`, `ml`) follows the same structure:
 
 ## Common commands (run from the repo root)
 
-- `make up_infra` / `make down_infra` — Postgres + shared Docker network
+- `make up_infra` / `make down_infra` — Postgres + Kafka + shared Docker network
+- `make kafka_topics` — bootstrap Kafka topics locally
 - `make up_app` / `make down_app` — application services only
 - `make up` / `make down` — full stack (infra + app)
 - `make up_pat` / `make up_ml` / `make up_hk` — per-service app targets

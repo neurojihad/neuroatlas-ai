@@ -17,7 +17,7 @@ code consistent with the patterns below.
 - **adapters/** — concrete implementations of domain ports: `http/` (FastAPI),
   `database/` (repositories + unit of work), `predictor/` (ml only).
 - **common/** — shared building blocks reused by every service: `application/`,
-  `core/`, `http/`.
+  `core/`, `http/`, `core/entities/`, `adapters/bus/`.
 - Allowed flow: `adapters -> domain` (only through ports). `domain` NEVER imports
   adapters or frameworks. Cross-cutting concerns live in `common`.
 
@@ -45,11 +45,36 @@ code consistent with the patterns below.
   `adapters/http/dependencies.py` + FastAPI `Depends`.
 - Swapping an implementation (in-memory → SQLAlchemy/asyncpg) must not touch domain.
 
+## Messaging (Kafka)
+
+Follow the **paymentgate** event-bus pattern:
+
+- **Streams (Kafka topics):** `EventStream` `StrEnum` in `common/core/entities/events.py`.
+  Enum member names are domain-oriented; values are the topic strings used in Kafka
+  and `docs/ARCHITECTURE.md`. Bootstrap topics from `EventStream.all_streams()`.
+- **Event types:** `EventKind` `StrEnum` in the same module (PascalCase values).
+- **Payload:** `Event` dataclass (`kind`, `source`, `aggregate_id`, `stream`, `payload`,
+  `meta`, …) with `as_dict()` for serialization. Do not invent parallel envelope types.
+- **Port:** `EventBus` in `common/core/ports/bus.py` — `send_to_bus`, `get_messages`,
+  `commit`, `move_ptr_to_commited`. Domain code never imports `aiokafka`.
+- **Adapters:** `KafkaEventBus` and helpers (`get_producer`, `get_consumer`) in
+  `common/adapters/bus/kafka.py`; `InMemEventBus` in `common/adapters/bus/in_mem.py`.
+- **Wiring:** in `lifespan.py`, create producer/consumer (or `InMemEventBus.instance()`),
+  pass `KafkaEventBus(producer=…)` / `KafkaEventBus(consumer=…)` into handlers.
+  Use `run_consumer_loop` for Kafka polling; subscribe handlers on `InMemEventBus`
+  when `KAFKA_ENABLED=false`.
+- Service-specific handlers live in `<service>/adapters/messaging/` and delegate to
+  domain `queries`/`commands` — filter by `EventKind`, publish with `send_to_bus`.
+- Install the `messaging` poetry group in Dockerfiles for services that use the bus.
+- Reset `InMemEventBus` in `conftest.py` via `InMemEventBus.reset()`.
+
 ## App wiring, errors & responses
 
 - Build every service app through `common.application.app_factory.create(...)`
   (shared CORS, error envelope, `/health`). Don't hand-roll `FastAPI()` per service.
 - Service settings subclass `common.application.settings.Settings`; read env vars there.
+  Local and Docker runs load values from `infra/.env` (Makefile `-include` + compose
+  `--env-file infra/.env`). Edit `.env`, not `.env.example`.
 - Raise `DomainError` subclasses from domain (`NotFound` 404,
   `ContextValidationError` 422, `InvalidOperation` 409). `register_exception_handlers`
   maps them to the uniform `ErrorSchema`.

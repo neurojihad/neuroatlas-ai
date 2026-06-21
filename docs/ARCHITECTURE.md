@@ -368,7 +368,7 @@ search-requested
         ↓
 Search Service
         ↓
-context-generated
+search-completed
         ↓
 LLM Orchestrator
         ↓

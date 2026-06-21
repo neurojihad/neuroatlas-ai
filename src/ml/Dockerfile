@@ -12,7 +12,7 @@ RUN groupadd --gid 2000 app \
 COPY pyproject.toml poetry.lock* /app/
 # The baseline predictor needs no native ML wheels; add `,ml` to install the
 # heavy group once you wire a trained model.
-RUN poetry install --only main --no-root
+RUN poetry install --only main,messaging --no-root
 
 COPY src/common /app/common
 COPY src/ml /app/ml
