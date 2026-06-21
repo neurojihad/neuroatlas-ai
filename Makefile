@@ -24,30 +24,45 @@ run_housekeeper:
 	poetry run uvicorn housekeeper.main:app --host 0.0.0.0 --port 8003 --reload
 
 # Infrastructure (local)
+# Infra compose: Postgres + shared network. App compose: patients, ml, housekeeper.
+# Run `make up_infra` before app services; `make up` starts both.
 
-up:
-	docker compose up -d
+COMPOSE_INFRA = docker compose -f infra/infra.compose.yml
+COMPOSE_APP = docker compose -f infra/application.compose.yml
 
-down:
-	docker compose down
+up: up_infra up_app
+
+down: down_app down_infra
+
+up_infra:
+	$(COMPOSE_INFRA) up -d
+
+down_infra:
+	$(COMPOSE_INFRA) down
+
+up_app:
+	$(COMPOSE_APP) up -d --build
+
+down_app:
+	$(COMPOSE_APP) down
 
 up_pat:
-	docker compose up -d patients
+	$(COMPOSE_APP) up -d --build patients
 
 down_pat:
-	docker compose stop patients
+	$(COMPOSE_APP) stop patients
 
 up_ml:
-	docker compose up -d ml
+	$(COMPOSE_APP) up -d --build ml
 
 down_ml:
-	docker compose stop ml
+	$(COMPOSE_APP) stop ml
 
 up_hk:
-	docker compose up -d housekeeper
+	$(COMPOSE_APP) up -d --build housekeeper
 
 down_hk:
-	docker compose stop housekeeper
+	$(COMPOSE_APP) stop housekeeper
 
 # Lint and format
 
@@ -85,7 +100,7 @@ test_ml:
 test_housekeeper:
 	poetry run pytest src/housekeeper --cov=src/housekeeper
 
-# Migrations (all run through Housekeeper / the repo-root alembic.ini)
+# Migrations (all run through Housekeeper; requires Postgres — run `make up_infra` first)
 
 migrate:
 	poetry run alembic upgrade head

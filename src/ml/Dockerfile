@@ -16,6 +16,7 @@ RUN poetry install --only main --no-root
 
 COPY src/common /app/common
 COPY src/ml /app/ml
+COPY src/common/application/healthcheck.py /app/healthcheck.py
 USER app
 
 CMD ["uvicorn", "ml.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

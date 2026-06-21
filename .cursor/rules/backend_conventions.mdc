@@ -84,7 +84,8 @@ code consistent with the patterns below.
 - Lint/format config lives in `pyproject.toml`: ruff line-length 120, target
   py312, mccabe max-complexity 10.
 - Each service ships a `src/<service>/Dockerfile` (non-root user,
-  `poetry install --only main,<group>`); `docker-compose.yml` runs local infra.
+  `poetry install --only main,<group>`); compose files under `infra/` run local
+  infra (`infra.compose.yml`) and app services (`application.compose.yml`).
 - CI must run these same gates (`fmt_check`, `lint`, `test`, `sast`, docker build)
   on every PR. *(No pipeline file exists yet — when adding CI, drive it from the
   Makefile targets so local and CI stay identical.)*

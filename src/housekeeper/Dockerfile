@@ -18,6 +18,7 @@ RUN poetry install --only main,housekeeper --no-root
 COPY alembic.ini /app/alembic.ini
 COPY src/common /app/src/common
 COPY src/housekeeper /app/src/housekeeper
+COPY src/common/application/healthcheck.py /app/healthcheck.py
 USER app
 
 CMD ["uvicorn", "housekeeper.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

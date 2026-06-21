@@ -337,10 +337,23 @@ invocations when an equivalent Make target exists.
 
 ## Per-service up / down (Docker)
 
-* Bring a single service up: `make up_<abbr>`
+* Bring a single service up: `make up_<abbr>` (uses `infra/application.compose.yml`)
 * Tear a single service down: `make down_<abbr>`
-* Each target wraps `docker compose` for that service only (and its declared
-  dependencies, e.g. Postgres when required).
+* Each target wraps `docker compose -f infra/application.compose.yml` for that
+  service only.
+* Postgres lives in `infra/infra.compose.yml`; run `make up_infra` before app
+  services so the shared `neuroatlasnet` network and database are available.
+
+## Infra vs application compose
+
+* `infra/infra.compose.yml` — infrastructure only (Postgres, shared network).
+  Targets: `make up_infra`, `make down_infra`.
+* `infra/application.compose.yml` — application services only (patients, ml,
+  housekeeper). Targets: `make up_app`, `make down_app`, and all
+  `up_<abbr>` / `down_<abbr>` targets.
+* Migrations are **not** a compose service. Apply them explicitly with
+  `make migrate` (after `make up_infra`) or per-service `alembic -n <service>`
+  once the multi-db layout lands.
 
 ## Service abbreviations (mandatory)
 
@@ -358,11 +371,14 @@ matching `up_<abbr>` / `down_<abbr>` targets to the `Makefile`.
 
 ## Full stack
 
-* `make up` — start all compose services (Postgres + every app service).
-* `make down` — stop the full compose stack.
+* `make up` — start infra then app (`up_infra` + `up_app`).
+* `make down` — stop app then infra (`down_app` + `down_infra`).
+* `make up_infra` / `make down_infra` — Postgres + `neuroatlasnet` only.
+* `make up_app` / `make down_app` — all application services.
 
 Use per-service targets for day-to-day work; use `make up` / `make down` when
-you need the entire environment.
+you need the entire environment. Always ensure infra is up before starting app
+services.
 
 ## Local run (no Docker)
 

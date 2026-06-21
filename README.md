@@ -123,3 +123,75 @@ Unified Platform
 ## Disclaimer
 
 NeuroAtlas AI is a research project and is not intended for diagnosis or clinical decision-making.
+
+## NeuroAtlas AI Workflow
+
+```mermaid
+flowchart LR
+
+    A[Clinician Question]
+
+    B[Gateway API]
+
+    C[Semantic Search]
+
+    D[Relevant Evidence]
+
+    E[LLM]
+
+    F[Evidence-Based Answer]
+
+    G[Scientific Sources]
+
+    A --> B
+
+    B --> C
+
+    C --> D
+
+    D --> E
+
+    E --> F
+
+    E --> G
+```
+
+## Future Clinical Prediction Pipeline
+
+```mermaid
+flowchart LR
+
+    A[Patient Features]
+
+    B[GMFCS]
+
+    C[MACS]
+
+    D[Ashworth]
+
+    E[Age]
+
+    F[Therapy Type]
+
+    G[XGBoost]
+
+    H[SHAP]
+
+    I[Outcome Prediction]
+
+    A --> B
+    A --> C
+    A --> D
+    A --> E
+    A --> F
+
+    B --> G
+    C --> G
+    D --> G
+    E --> G
+    F --> G
+
+    G --> H
+
+    H --> I
+```
