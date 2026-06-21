@@ -1,0 +1,31 @@
+name: neuroatlas-infra
+
+networks:
+  neuroatlasnet:
+    name: neuroatlasnet
+
+volumes:
+  pg_data:
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres_neuroatlas
+    restart: always
+    hostname: postgres_neuroatlas
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-neuroatlas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-neuroatlas}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - neuroatlasnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-neuroatlas} -d ${POSTGRES_DB:-neuroatlas}"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+      start_period: 5s

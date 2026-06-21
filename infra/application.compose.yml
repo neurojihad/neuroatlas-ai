@@ -1,0 +1,71 @@
+name: neuroatlas-app
+
+x-healthcheck: &healthcheck
+  test: ["CMD", "python", "/app/healthcheck.py"]
+  interval: 3s
+  timeout: 3s
+  retries: 10
+  start_period: 30s
+
+x-common-env: &common-env
+  ENVIRONMENT: local
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  PATIENTS_ROUTE: patients:8000
+  ML_ROUTE: ml:8000
+  HOUSEKEEPER_ROUTE: housekeeper:8000
+
+networks:
+  neuroatlasnet:
+    name: neuroatlasnet
+    external: true
+
+services:
+  patients:
+    image: patients:local
+    container_name: patients
+    restart: always
+    build:
+      context: ../.
+      dockerfile: src/patients/Dockerfile
+    hostname: patients
+    environment:
+      <<: *common-env
+      POSTGRES_URI: postgresql+asyncpg://${POSTGRES_USER:-neuroatlas}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-neuroatlas}
+    ports:
+      - "8001:8000"
+    networks:
+      - neuroatlasnet
+    healthcheck: *healthcheck
+
+  ml:
+    image: ml:local
+    container_name: ml
+    restart: always
+    build:
+      context: ../.
+      dockerfile: src/ml/Dockerfile
+    hostname: ml
+    environment:
+      <<: *common-env
+    ports:
+      - "8002:8000"
+    networks:
+      - neuroatlasnet
+    healthcheck: *healthcheck
+
+  housekeeper:
+    image: housekeeper:local
+    container_name: housekeeper
+    restart: always
+    build:
+      context: ../.
+      dockerfile: src/housekeeper/Dockerfile
+    hostname: housekeeper
+    environment:
+      <<: *common-env
+      POSTGRES_URI: postgresql+asyncpg://${POSTGRES_USER:-neuroatlas}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-neuroatlas}
+    ports:
+      - "8003:8000"
+    networks:
+      - neuroatlasnet
+    healthcheck: *healthcheck
