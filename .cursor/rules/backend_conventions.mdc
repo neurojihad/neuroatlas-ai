@@ -68,6 +68,94 @@ Follow the **paymentgate** event-bus pattern:
 - Install the `messaging` poetry group in Dockerfiles for services that use the bus.
 - Reset `InMemEventBus` in `conftest.py` via `InMemEventBus.reset()`.
 
+## ML (XGBoost)
+
+All outcome-prediction and future ranking models that use gradient boosting must follow
+the official **[XGBoost stable documentation](https://xgboost.readthedocs.io/en/stable/)**.
+Treat it as the source of truth for install, API usage, objectives, and deployment —
+do not rely on blog posts or outdated snippets.
+
+- **Dependency:** declare `xgboost` (and related libs: `numpy`, `scikit-learn`, `shap`) in
+  the Poetry **`ml`** group in `pyproject.toml`. Pin versions there; bump only after checking
+  the [release notes](https://xgboost.readthedocs.io/en/stable/changes/index.html).
+- **Local install:** `make install_ml` or `poetry install --with ml`. See the
+  [Installation Guide](https://xgboost.readthedocs.io/en/stable/install.html) for platform
+  wheels (Linux/macOS/Windows). **macOS:** install OpenMP first (`brew install libomp`) before
+  importing XGBoost.
+- **Layering:** domain depends on `OutcomePredictor` (`ml/domain/ports/predictor.py`) only.
+  XGBoost imports belong in `ml/adapters/predictor/` (e.g. a trained model loader), never in
+  `domain/` or HTTP handlers. SHAP explainability stays in the adapter layer alongside the model.
+- **Scaffold vs production:** the repo ships `BaselineOutcomePredictor` so `make test` runs
+  without the `ml` group. When wiring a real model, implement `OutcomePredictor` using patterns
+  from [Get Started](https://xgboost.readthedocs.io/en/stable/get_started.html) and
+  [Python API](https://xgboost.readthedocs.io/en/stable/python/python_api.html); load via
+  `lifespan.py` onto `app.state.predictor`.
+- **Objectives & tutorials:** choose objectives and training flows from the official tutorials
+  (e.g. [Learning to Rank](https://xgboost.readthedocs.io/en/stable/tutorials/learning_to_rank.html)
+  for Search reranking, standard classification/regression for outcome prediction). Document the
+  chosen objective and feature schema in the adapter module docstring.
+- **Docker / deploy:** when the ML service uses XGBoost in production, install the group in
+  `src/ml/Dockerfile` (`poetry install --only main,ml,messaging --no-root` or equivalent).
+  Linux containers use PyPI manylinux wheels per the install guide; GPU (`device=cuda`) is
+  optional and follows [GPU Support](https://xgboost.readthedocs.io/en/stable/gpu/index.html).
+- **Tests:** keep domain tests on `BaselineOutcomePredictor` or fakes; add adapter-level tests
+  for XGBoost serialization/load/predict paths. Default CI may omit the `ml` group unless
+  integration tests require it.
+
+## Exceptions
+
+Follow the **paymentgate** layered exception model (`paymentgate/src/common/core/exceptions.py`).
+NeuroAtlas uses the same rules; names map as follows:
+
+| Layer | paymentgate | NeuroAtlas (today) | Raise in |
+|-------|-------------|-------------------|----------|
+| Domain / service | `ServiceException` | `DomainError` subclasses (`NotFound`, `ContextValidationError`, `InvalidOperation`) | `domain/commands.py`, `domain/queries.py`, domain tasks |
+| Adapter / infra | `AdapterException` | `BusException` (+ future `DatabaseException`) | `adapters/database/`, `adapters/bus/`, external gateways |
+| HTTP / API | `APIException`, `HTTPException` | FastAPI handlers + `register_exception_handlers` for `DomainError` | `adapters/http/` only |
+
+**Dependency rule (same as paymentgate):**
+
+- Domain code raises **`DomainError`** only — never `BusException`, never bare `Exception`.
+- Adapters wrap infrastructure failures in **`BusException`** / **`DatabaseException`** (when DB lands).
+- HTTP handlers stay thin: build command/query context, execute, return envelope. Let
+  `register_exception_handlers` map `DomainError` → HTTP status; do not catch domain errors
+  in handlers unless translating to a different response shape.
+- A lower-layer exception may propagate upward (adapter → domain → HTTP), but never raise an
+  HTTP/API exception from domain or adapters.
+
+**Orchestration pattern (tasks, Kafka handlers, background loops):**
+
+Re-raise adapter/infrastructure errors; log and contain everything else so one bad message
+does not kill the worker. Mirror paymentgate `tasks.py` / `domain/tasks.py`:
+
+```python
+try:
+    await command.execute()
+except DatabaseException:
+    raise
+except BusException:
+    raise
+except Exception as exc:
+    await logger.aerror("Failure while processing batch.", exc_info=exc)
+```
+
+For **Kafka consumers**, after logging a non-infrastructure failure, commit/skip the event
+so the partition does not stall (see paymentgate `consume_inbox_events`). Infrastructure
+errors (`BusException`, `DatabaseException`) are logged and **re-raised** so the caller can
+retry or fail fast.
+
+**Logging:**
+
+- Use `await logger.aerror(..., exc_info=exc)` or `await logger.aexception(...)` — never `print`.
+- Include correlation fields (`event_id`, `aggregate_id`, `kind`, `stream`) on bus/task paths.
+
+**Adding new exceptions:**
+
+- Subclass the correct layer in `common/core/exceptions.py` (domain) or the service’s
+  `domain/exceptions.py` if service-specific.
+- Give `DomainError` subclasses a `status_code` when they surface over HTTP.
+- Do not introduce parallel error types in adapters when a domain or adapter base class fits.
+
 ## App wiring, errors & responses
 
 - Build every service app through `common.application.app_factory.create(...)`
@@ -75,8 +163,7 @@ Follow the **paymentgate** event-bus pattern:
 - Service settings subclass `common.application.settings.Settings`; read env vars there.
   Local and Docker runs load values from `infra/.env` (Makefile `-include` + compose
   `--env-file infra/.env`). Edit `.env`, not `.env.example`.
-- Raise `DomainError` subclasses from domain (`NotFound` 404,
-  `ContextValidationError` 422, `InvalidOperation` 409). `register_exception_handlers`
+- Raise `DomainError` subclasses from domain — see **Exceptions** above. `register_exception_handlers`
   maps them to the uniform `ErrorSchema`.
 - Wrap successful output in `ResponseSchema` / `ListResponseSchema` /
   `PaginatedResponseSchema` (`common.http.schemas`).
