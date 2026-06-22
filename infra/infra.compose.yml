@@ -39,7 +39,7 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    entrypoint: ["python", "/scripts/init_topics.py"]
+    entrypoint: ["python3", "/scripts/init_topics.py"]
     volumes:
       - ./kafka/init_topics.py:/scripts/init_topics.py:ro
       - ../src:/app/src:ro

@@ -27,6 +27,10 @@ run_housekeeper:
 # Infrastructure (local)
 # Infra compose: Postgres + Kafka + shared network. App compose: patients, ml, housekeeper.
 # Run `make up_infra` before app services; `make up` starts both.
+#
+# ML Kafka consumer (Docker):
+#   1. Set KAFKA_ENABLED=true in infra/.env
+#   2. make up_infra && make kafka_topics && make up_ml
 
 COMPOSE_ENV = --env-file infra/.env
 COMPOSE_INFRA = docker compose $(COMPOSE_ENV) -f infra/infra.compose.yml
@@ -61,6 +65,7 @@ down_pat:
 	$(COMPOSE_APP) stop patients
 
 up_ml:
+	@echo "ML Kafka consumer is active only when KAFKA_ENABLED=true in infra/.env"
 	$(COMPOSE_APP) up -d --build ml
 
 down_ml:

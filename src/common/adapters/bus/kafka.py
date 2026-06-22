@@ -113,8 +113,27 @@ async def run_consumer_loop(
     try:
         while True:
             async for event in event_bus.get_messages():
-                await handler(event)
-                await event_bus.commit(event)
+                await _dispatch_event(event_bus, handler, event)
             await asyncio.sleep(poll_interval_sec)
     except asyncio.CancelledError:
         raise
+
+
+async def _dispatch_event(event_bus: EventBus, handler, event: Event) -> None:
+    try:
+        await handler(event)
+    except Exception:
+        await logger.aexception(
+            "Event handler failed.",
+            event_id=event.event_id,
+            kind=str(event.kind),
+            aggregate_id=event.aggregate_id,
+        )
+    try:
+        await event_bus.commit(event)
+    except Exception:
+        await logger.aexception(
+            "Failed to commit event offset.",
+            event_id=event.event_id,
+            kind=str(event.kind),
+        )

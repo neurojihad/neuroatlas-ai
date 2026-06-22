@@ -33,7 +33,15 @@ class InMemEventBus(EventBus):
         handlers = list(self._handlers.get(stream, []))
         for event in events:
             for handler in handlers:
-                await handler(event)
+                try:
+                    await handler(event)
+                except Exception:
+                    await logger.aexception(
+                        "In-memory event handler failed.",
+                        stream=stream,
+                        event_id=event.event_id,
+                        kind=str(event.kind),
+                    )
 
     async def get_messages(self) -> AsyncIterator[Event]:
         if False:

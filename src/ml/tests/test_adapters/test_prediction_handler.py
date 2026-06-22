@@ -59,3 +59,63 @@ async def test_prediction_handler_publishes_completed_event():
     assert 0.0 <= completed[0]["probability"] <= 1.0
     assert completed[0]["model_version"] == "test-0.0.0"
     assert completed[0]["attributions"]
+
+
+@pytest.mark.asyncio
+async def test_prediction_handler_skips_invalid_payload():
+    completed: list[dict] = []
+
+    async def capture_completed(event: Event) -> None:
+        completed.append(event.payload)
+
+    bus = InMemEventBus.instance()
+    bus.subscribe(EventStream.PredictionEvents, capture_completed)
+    predictor = BaselineOutcomePredictor(model_version="test-0.0.0")
+    settings = Settings(service_name="ml")
+
+    request = Event(
+        kind=EventKind.PredictionRequested,
+        source="gateway",
+        aggregate_id="req-bad",
+        stream=EventStream.PredictionRequests,
+        payload={"target": OutcomeTarget.GMFCS_IMPROVEMENT.value},
+    )
+
+    await handle_prediction_event(
+        request,
+        predictor=predictor,
+        event_bus=bus,
+        settings=settings,
+    )
+
+    assert completed == []
+
+
+@pytest.mark.asyncio
+async def test_prediction_handler_ignores_unexpected_kind():
+    completed: list[dict] = []
+
+    async def capture_completed(event: Event) -> None:
+        completed.append(event.payload)
+
+    bus = InMemEventBus.instance()
+    bus.subscribe(EventStream.PredictionEvents, capture_completed)
+    predictor = BaselineOutcomePredictor(model_version="test-0.0.0")
+    settings = Settings(service_name="ml")
+
+    request = Event(
+        kind=EventKind.PredictionCompleted,
+        source="gateway",
+        aggregate_id="req-1",
+        stream=EventStream.PredictionRequests,
+        payload={},
+    )
+
+    await handle_prediction_event(
+        request,
+        predictor=predictor,
+        event_bus=bus,
+        settings=settings,
+    )
+
+    assert completed == []
