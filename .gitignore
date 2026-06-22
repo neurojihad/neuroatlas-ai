@@ -26,3 +26,6 @@ models/
 
 # IDE / OS
 .DS_Store
+
+# Private data
+docs/private/
