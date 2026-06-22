@@ -25,4 +25,4 @@ async def predict(
     """
     features = PatientFeatures(**payload.features.model_dump())
     result = queries.predict_outcome(target=payload.target, features=features, predictor=predictor)
-    return ResponseSchema[PredictionSchema](data=asdict(result))
+    return ResponseSchema[PredictionSchema](data=PredictionSchema(**asdict(result)))

@@ -1,0 +1,395 @@
+---
+
+## alwaysApply: true
+
+# Priority Rule
+
+Project-specific rules take precedence over generic engineering principles.
+
+When DRY, SOLID, KISS, PEP8, or Clean Architecture conflict,
+prefer the solution that is most consistent with the existing codebase.
+
+---
+
+# Understand Before Changing
+
+Before modifying code:
+
+1. Read the entire file.
+2. Read related files.
+3. Identify the existing implementation pattern.
+4. Follow the existing pattern.
+
+Do not introduce a new pattern when an equivalent pattern already exists.
+
+---
+
+# Minimal Changes Rule
+
+Implement the smallest change that fully solves the task.
+
+Do not:
+
+* Refactor unrelated code.
+* Rename files unnecessarily.
+* Modify unrelated modules.
+* Introduce architectural changes without request.
+
+Keep changes focused on the requested task.
+
+---
+
+# Documentation Standards
+
+All classes must contain a class-level docstring.
+
+All public methods and functions must contain a docstring.
+
+Private methods should contain a docstring when their purpose is not obvious.
+
+Docstrings must explain:
+
+* Purpose
+* Parameters
+* Return value (if applicable)
+* Raised exceptions (if applicable)
+
+Example:
+
+```python
+class UserService:
+    """Service responsible for user-related operations."""
+
+    def get_user(self, user_id: int) -> User:
+        """
+        Retrieve a user by identifier.
+
+        Args:
+            user_id: Unique user identifier.
+
+        Returns:
+            User instance.
+
+        Raises:
+            UserNotFoundError: If user does not exist.
+        """
+```
+
+---
+
+# Type Hints
+
+All functions, methods, and class attributes must use type hints whenever possible.
+
+Avoid untyped parameters and return values.
+
+Prefer explicit types over Any.
+
+---
+
+# Documentation Formatting
+
+After every class docstring and method docstring,
+there must be exactly one blank line before the first executable statement.
+
+This rule overrides formatter preferences.
+
+Correct:
+
+```python
+class UserService:
+    """User service."""
+
+    def get_user(self, user_id: int) -> User:
+        """Retrieve user by id."""
+
+        user = self.repository.get(user_id)
+        return user
+```
+
+Incorrect:
+
+```python
+class UserService:
+    """User service."""
+    def get_user(self, user_id: int) -> User:
+        """Retrieve user by id."""
+        user = self.repository.get(user_id)
+        return user
+```
+
+---
+
+# Code Readability
+
+Prefer self-documenting code.
+
+Use meaningful names for:
+
+* classes
+* methods
+* variables
+* constants
+
+Avoid comments that merely repeat the code.
+
+Use comments only to explain:
+
+* business rules
+* non-obvious decisions
+* workarounds
+* technical constraints
+
+Prefer docstrings over inline comments.
+
+---
+
+# Engineering Principles
+
+All code changes must follow the principles below.
+
+## DRY (Don't Repeat Yourself)
+
+* Avoid duplicated business logic.
+* Reuse existing implementations whenever possible.
+* Extract repeated logic into shared methods, services, or utilities.
+* Maintain a single source of truth for the same behavior.
+
+When similar business logic appears in 2 or more locations,
+consider extracting it into a shared implementation.
+
+When similar business logic appears in 3 or more locations,
+extraction is strongly recommended.
+
+Apply DRY pragmatically.
+
+Do not introduce abstractions for one-time code.
+
+---
+
+## SOLID
+
+Follow SOLID principles where they improve maintainability.
+
+Especially:
+
+* Single Responsibility Principle (SRP)
+* Dependency Inversion Principle (DIP)
+
+Avoid creating unnecessary interfaces, inheritance hierarchies, or abstractions solely to satisfy SOLID.
+
+---
+
+## KISS (Keep It Simple)
+
+Prefer the simplest solution that solves the problem.
+
+Avoid:
+
+* overengineering
+* excessive abstraction
+* speculative design
+* unnecessary design patterns
+
+Simple and readable code is preferred over clever code.
+
+---
+
+## PEP 8
+
+All Python code must comply with PEP 8.
+
+Requirements:
+
+* Meaningful naming
+* Proper spacing
+* Consistent formatting
+* Type hints whenever possible
+* Clear imports
+* Maximum readability
+
+---
+
+## Clean Architecture
+
+Respect project architecture boundaries.
+
+Allowed dependency flow:
+
+api -> services
+
+services -> repositories
+
+repositories -> database
+
+Business logic belongs in services.
+
+Database access belongs in repositories.
+
+HTTP concerns belong in API layer only.
+
+Forbidden:
+
+* api -> repositories
+* repositories -> services
+* repositories -> api
+
+---
+
+# Investigate First
+
+When fixing bugs:
+
+1. Explain the likely root cause.
+2. Show evidence.
+3. Propose a fix.
+4. Only then modify code.
+
+Never make speculative changes without identifying the cause.
+
+---
+
+# Database Migrations
+
+The Housekeeper service is the single owner of all database migrations.
+
+These rules mirror the migration conventions of the paymentgate project.
+
+## Ownership
+
+* All migrations live under `src/housekeeper/migrations/`.
+* All migrations are generated and applied exclusively through Housekeeper.
+* No other service may create, run, or own migrations.
+* `alembic.ini` lives at `src/housekeeper/alembic.ini`.
+
+## Per-service segregation
+
+* Migrations are segregated per service/database into subdirectories:
+  `src/housekeeper/migrations/<service>/`.
+* Each service/database has its own revision history; never mix services in one
+  directory.
+
+## Alembic configuration (multi-database)
+
+* The `[alembic]` section declares every database:
+  `databases = patients, ml, rag` (comma-separated list of all logical DBs).
+* `[DEFAULT]` holds the shared `file_template` and `truncate_slug_length = 60`.
+* Each database has its own section with a per-service version location:
+
+```ini
+[patients]
+sqlalchemy.url = driver://user:pass@localhost/dbname
+version_locations = ./migrations/patients
+```
+
+* Global keys: `prepend_sys_path = .`, `script_location = ./migrations/`,
+  `version_path_separator = os`.
+
+## Migration file naming (mandatory)
+
+* Use the timestamp-prefixed template exactly:
+
+```ini
+file_template = %%(year)d-%%(month).2d-%%(day).2d-%%(hour).2d-%%(minute).2d-%%(second).2d-%%(rev)s_%%(slug)s
+```
+
+* This produces filenames like:
+
+```
+2026-02-03-22-42-50-ced76f42edaa_.py
+```
+
+  i.e. `YYYY-MM-DD-HH-MM-SS-<revision_hash>_<slug>.py` (slug may be empty).
+* Keep `truncate_slug_length = 60`.
+
+## env.py behavior
+
+* Select the active database from the ini section: `db_name = config.config_ini_section`.
+* Import that service's model metadata dynamically and use its `Base.metadata`
+  as `target_metadata`.
+* Read the database URL from settings keyed by db name
+  (e.g. `settings.<db_name>_postgres_uri`), escaping `%` as `%%`.
+* Skip revision generation when there are no changes
+  (`process_revision_directives`), logging a warning.
+* Filter reflected objects not described in the models (`include_object`).
+* Run with the async engine, falling back to a sync engine when greenlet is
+  unavailable (local environment).
+
+## Workflow
+
+* Generate and apply migrations per service by selecting its ini section:
+
+```bash
+alembic -n <service> revision --autogenerate -m "message"
+alembic -n <service> upgrade head
+```
+
+* Wrap these in Housekeeper Make targets; never invoke migrations from another
+  service.
+
+---
+
+# Service lifecycle (Makefile)
+
+Every service is started and stopped through Makefile targets defined in the
+repo-root `Makefile`. Do not document or use ad-hoc `docker compose` / `uvicorn`
+invocations when an equivalent Make target exists.
+
+## Per-service up / down (Docker)
+
+* Bring a single service up: `make up_<abbr>` (uses `infra/application.compose.yml`)
+* Tear a single service down: `make down_<abbr>`
+* Each target wraps `docker compose -f infra/application.compose.yml` for that
+  service only.
+* Postgres lives in `infra/infra.compose.yml`; run `make up_infra` before app
+  services so the shared `neuroatlasnet` network and database are available.
+
+## Infra vs application compose
+
+* `infra/infra.compose.yml` — infrastructure only (Postgres, shared network).
+  Targets: `make up_infra`, `make down_infra`.
+* `infra/application.compose.yml` — application services only (patients, ml,
+  housekeeper). Targets: `make up_app`, `make down_app`, and all
+  `up_<abbr>` / `down_<abbr>` targets.
+* Migrations are **not** a compose service. Apply them explicitly with
+  `make migrate` (after `make up_infra`) or per-service `alembic -n <service>`
+  once the multi-db layout lands.
+
+## Service abbreviations (mandatory)
+
+Use these short codes in Make target names:
+
+| Service      | Abbreviation | Up            | Down              |
+|--------------|--------------|---------------|-------------------|
+| patients     | `pat`        | `make up_pat` | `make down_pat`   |
+| ml           | `ml`         | `make up_ml`  | `make down_ml`    |
+| housekeeper  | `hk`         | `make up_hk`  | `make down_hk`    |
+| rag          | `rag`        | `make up_rag` | `make down_rag`   |
+
+When adding a new service, register its abbreviation in this table and add
+matching `up_<abbr>` / `down_<abbr>` targets to the `Makefile`.
+
+## Full stack
+
+* `make up` — start infra then app (`up_infra` + `up_app`).
+* `make down` — stop app then infra (`down_app` + `down_infra`).
+* `make up_infra` / `make down_infra` — Postgres + `neuroatlasnet` only.
+* `make up_app` / `make down_app` — all application services.
+
+Use per-service targets for day-to-day work; use `make up` / `make down` when
+you need the entire environment. Always ensure infra is up before starting app
+services.
+
+## Local run (no Docker)
+
+* Run a service locally with hot reload: `make run_<service>` (full service name,
+  not abbreviation), e.g. `make run_patients`, `make run_ml`, `make run_housekeeper`.
+* Local run targets use `uvicorn` and do not require Docker; they are for
+  development against in-memory adapters or a locally running Postgres.
+
+## Naming rules
+
+* Docker lifecycle: `up_<abbr>` / `down_<abbr>` (short abbreviation).
+* Local dev server: `run_<service>` (full service directory name).
+* Tests: `test_<service>` (full service directory name).
+* New services must follow all three patterns in the `Makefile`.

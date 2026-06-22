@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      { "command": "make lint_fix" }
+    ],
+    "stop": [
+      { "command": "make lint" }
+    ]
+  }
+}

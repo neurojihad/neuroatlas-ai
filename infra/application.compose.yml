@@ -1,0 +1,82 @@
+name: neuroatlas-app
+
+x-healthcheck: &healthcheck
+  test: ["CMD", "python", "/app/healthcheck.py"]
+  interval: 3s
+  timeout: 3s
+  retries: 10
+  start_period: 30s
+
+x-app-env-file: &app-env-file
+  env_file:
+    - .env
+
+x-common-env: &common-env
+  ENVIRONMENT: ${ENVIRONMENT:-local}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  PATIENTS_ROUTE: ${PATIENTS_ROUTE:-patients:8000}
+  ML_ROUTE: ${ML_ROUTE:-ml:8000}
+  HOUSEKEEPER_ROUTE: ${HOUSEKEEPER_ROUTE:-housekeeper:8000}
+  KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_DOCKER_BOOTSTRAP_SERVERS:-kafka:9092}
+
+networks:
+  neuroatlasnet:
+    name: neuroatlasnet
+    external: true
+
+services:
+  patients:
+    <<: *app-env-file
+    image: patients:local
+    container_name: patients
+    restart: always
+    build:
+      context: ../.
+      dockerfile: src/patients/Dockerfile
+    hostname: patients
+    environment:
+      <<: *common-env
+      POSTGRES_URI: postgresql+asyncpg://${POSTGRES_USER:-neuroatlas}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-neuroatlas}
+    ports:
+      - "8001:8000"
+    networks:
+      - neuroatlasnet
+    healthcheck: *healthcheck
+
+  ml:
+    <<: *app-env-file
+    image: ml:local
+    container_name: ml
+    restart: always
+    build:
+      context: ../.
+      dockerfile: src/ml/Dockerfile
+    hostname: ml
+    environment:
+      <<: *common-env
+      KAFKA_CLIENT_ID: ${KAFKA_CLIENT_ID:-ml}
+      KAFKA_CONSUMER_GROUP: ${KAFKA_CONSUMER_GROUP:-ml}
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-false}
+    ports:
+      - "8002:8000"
+    networks:
+      - neuroatlasnet
+    healthcheck: *healthcheck
+
+  housekeeper:
+    <<: *app-env-file
+    image: housekeeper:local
+    container_name: housekeeper
+    restart: always
+    build:
+      context: ../.
+      dockerfile: src/housekeeper/Dockerfile
+    hostname: housekeeper
+    environment:
+      <<: *common-env
+      POSTGRES_URI: postgresql+asyncpg://${POSTGRES_USER:-neuroatlas}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-neuroatlas}
+    ports:
+      - "8003:8000"
+    networks:
+      - neuroatlasnet
+    healthcheck: *healthcheck

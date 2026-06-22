@@ -1,0 +1,116 @@
+---
+description: Backend architecture & conventions (hexagonal / ports & adapters, paymentgate-style) for the Python services in src/
+globs: src/**/*.py
+alwaysApply: true
+---
+
+# Backend Conventions
+
+The backend (`src/`) is a set of FastAPI services following a hexagonal
+(ports & adapters) architecture mirrored from the **paymentgate** repo. Keep new
+code consistent with the patterns below.
+
+## Layering & dependency rule
+
+- **domain/** — pure business logic. NO framework imports (no FastAPI,
+  SQLAlchemy, httpx). Holds: `entities`, `commands`, `queries`, `exceptions`, `ports/`.
+- **adapters/** — concrete implementations of domain ports: `http/` (FastAPI),
+  `database/` (repositories + unit of work), `predictor/` (ml only).
+- **common/** — shared building blocks reused by every service: `application/`,
+  `core/`, `http/`, `core/entities/`, `adapters/bus/`.
+- Allowed flow: `adapters -> domain` (only through ports). `domain` NEVER imports
+  adapters or frameworks. Cross-cutting concerns live in `common`.
+
+## Business logic: Commands & Queries
+
+- **Writes** subclass `common.core.commands.Command`:
+  - a frozen nested `Context` dataclass holds validated input;
+  - put input validation in `Context.validate_context()`, raising `ContextValidationError`;
+  - implement a single `async execute() -> CommandResult[T]`;
+  - open the transaction with `async with self.uow:`.
+- **Reads** are plain async functions in `domain/queries.py` that take the `uow`;
+  raise `NotFound` when an entity is missing.
+- HTTP handlers stay thin: build the `Context` from the Pydantic payload, run the
+  command/query, wrap the result in a response envelope. No business logic in handlers.
+
+## Ports & adapters
+
+- Declare abstractions in `domain/ports/` with `abc.ABC` + `@abc.abstractmethod`
+  (repositories, uow, predictor).
+- Implement them under `adapters/`. Persistence sits behind a `UnitOfWork`
+  (`common.core.ports.uow.UnitOfWork`) that commits on clean exit / rolls back on
+  exception via `__aexit__`.
+- Wire concrete adapters in `lifespan.py` onto `app.state` (e.g.
+  `app.state.uow_factory`) and expose them to handlers via
+  `adapters/http/dependencies.py` + FastAPI `Depends`.
+- Swapping an implementation (in-memory → SQLAlchemy/asyncpg) must not touch domain.
+
+## Messaging (Kafka)
+
+Follow the **paymentgate** event-bus pattern:
+
+- **Streams (Kafka topics):** `EventStream` `StrEnum` in `common/core/entities/events.py`.
+  Enum member names are domain-oriented; values are the topic strings used in Kafka
+  and `docs/ARCHITECTURE.md`. Bootstrap topics from `EventStream.all_streams()`.
+- **Event types:** `EventKind` `StrEnum` in the same module (PascalCase values).
+- **Payload:** `Event` dataclass (`kind`, `source`, `aggregate_id`, `stream`, `payload`,
+  `meta`, …) with `as_dict()` for serialization. Do not invent parallel envelope types.
+- **Port:** `EventBus` in `common/core/ports/bus.py` — `send_to_bus`, `get_messages`,
+  `commit`, `move_ptr_to_commited`. Domain code never imports `aiokafka`.
+- **Adapters:** `KafkaEventBus` and helpers (`get_producer`, `get_consumer`) in
+  `common/adapters/bus/kafka.py`; `InMemEventBus` in `common/adapters/bus/in_mem.py`.
+- **Wiring:** in `lifespan.py`, create producer/consumer (or `InMemEventBus.instance()`),
+  pass `KafkaEventBus(producer=…)` / `KafkaEventBus(consumer=…)` into handlers.
+  Use `run_consumer_loop` for Kafka polling; subscribe handlers on `InMemEventBus`
+  when `KAFKA_ENABLED=false`.
+- Service-specific handlers live in `<service>/adapters/messaging/` and delegate to
+  domain `queries`/`commands` — filter by `EventKind`, publish with `send_to_bus`.
+- Install the `messaging` poetry group in Dockerfiles for services that use the bus.
+- Reset `InMemEventBus` in `conftest.py` via `InMemEventBus.reset()`.
+
+## App wiring, errors & responses
+
+- Build every service app through `common.application.app_factory.create(...)`
+  (shared CORS, error envelope, `/health`). Don't hand-roll `FastAPI()` per service.
+- Service settings subclass `common.application.settings.Settings`; read env vars there.
+  Local and Docker runs load values from `infra/.env` (Makefile `-include` + compose
+  `--env-file infra/.env`). Edit `.env`, not `.env.example`.
+- Raise `DomainError` subclasses from domain (`NotFound` 404,
+  `ContextValidationError` 422, `InvalidOperation` 409). `register_exception_handlers`
+  maps them to the uniform `ErrorSchema`.
+- Wrap successful output in `ResponseSchema` / `ListResponseSchema` /
+  `PaginatedResponseSchema` (`common.http.schemas`).
+- IDs are ULID-based with a type prefix (e.g. `pat_`, `asm_`).
+
+## Logging & metrics (observability)
+
+- Use the shared structlog logger `common.application.logging.logger` with the
+  async API and bound kwargs: `await logger.ainfo("event", patient_id=pid)`.
+  JSON output, never `print`.
+- Metrics use `prometheus-client` (already a dependency). When wiring it, mount a
+  `/metrics` ASGI app and keep module-level Counters/Histograms in the app/adapter
+  layer — never instrument the domain. *(Declared but not yet wired — follow this
+  when adding it.)*
+
+## Tests
+
+- pytest with `asyncio_mode=auto`; write `async def test_*` functions in files
+  `test_*.py` under `src/<service>/tests/`, mirroring the module path
+  (e.g. `tests/test_domain/`).
+- Test domain logic against in-memory adapters; reset shared state with an autouse
+  fixture in `conftest.py` (`reset_store`).
+- Run `make test` or `make test_<service>` (with coverage). Coverage omits
+  `__init__`, `settings`, `domain/ports`, and tests.
+
+## Quality gates / CI-CD
+
+- Before pushing, `make check` must pass = `fmt` (isort --profile black + ruff
+  format) + `lint` (ruff + mypy) + `test`. Run `make sast` (bandit) for security.
+- Lint/format config lives in `pyproject.toml`: ruff line-length 120, target
+  py312, mccabe max-complexity 10.
+- Each service ships a `src/<service>/Dockerfile` (non-root user,
+  `poetry install --only main,<group>`); compose files under `infra/` run local
+  infra (`infra.compose.yml`) and app services (`application.compose.yml`).
+- CI must run these same gates (`fmt_check`, `lint`, `test`, `sast`, docker build)
+  on every PR. *(No pipeline file exists yet — when adding CI, drive it from the
+  Makefile targets so local and CI stay identical.)*

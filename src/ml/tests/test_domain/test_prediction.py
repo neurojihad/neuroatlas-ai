@@ -11,7 +11,7 @@ def _predictor() -> BaselineOutcomePredictor:
 
 
 def _features(**overrides) -> PatientFeatures:
-    base = dict(age_years=6, gmfcs=2, macs=2, ashworth_mean=1.0, rom_mean=110, therapy_hours_per_week=5)
+    base = dict(age_years=6, gmfcs=2, macs=2, ashworth_mean=1, rom_mean=110, therapy_hours_per_week=5)
     base.update(overrides)
     return PatientFeatures(**base)
 
