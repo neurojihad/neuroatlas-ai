@@ -222,7 +222,7 @@ version = "3.4.7"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
 optional = false
 python-versions = ">=3.7"
-groups = ["rag"]
+groups = ["main", "rag"]
 markers = "sys_platform == \"win32\" or sys_platform == \"emscripten\" or sys_platform != \"win32\" and sys_platform != \"emscripten\""
 files = [
     {file = "charset_normalizer-3.4.7-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:cdd68a1fb318e290a2077696b7eb7a21a49163c455979c639bf5a5dcdc46617d"},
@@ -1821,7 +1821,7 @@ files = [
     {file = "nvidia_nccl_cu12-2.26.2-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:5c196e95e832ad30fbbb50381eb3cbd1fadd5675e587a548563993609af19522"},
     {file = "nvidia_nccl_cu12-2.26.2-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:694cf3879a206553cc9d7dbda76b13efaf610fdb70a50cba303de1b0d1530ac6"},
 ]
-markers = {ml = "(sys_platform == \"win32\" or sys_platform == \"emscripten\" or sys_platform != \"win32\" and sys_platform != \"emscripten\") and platform_system == \"Linux\" and platform_machine != \"aarch64\"", rag = "(sys_platform == \"win32\" or sys_platform == \"emscripten\" or sys_platform != \"win32\" and sys_platform != \"emscripten\") and platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+markers = {ml = "(sys_platform == \"win32\" or sys_platform == \"emscripten\" or sys_platform != \"win32\" and sys_platform != \"emscripten\") and platform_system == \"Linux\"", rag = "(sys_platform == \"win32\" or sys_platform == \"emscripten\" or sys_platform != \"win32\" and sys_platform != \"emscripten\") and platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-nvjitlink-cu12"
@@ -2113,7 +2113,7 @@ version = "12.2.0"
 description = "Python Imaging Library (fork)"
 optional = false
 python-versions = ">=3.10"
-groups = ["rag"]
+groups = ["main", "rag"]
 markers = "sys_platform == \"win32\" or sys_platform == \"emscripten\" or sys_platform != \"win32\" and sys_platform != \"emscripten\""
 files = [
     {file = "pillow-12.2.0-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:a4e8f36e677d3336f35089648c8955c51c6d386a13cf6ee9c189c5f5bd713a9f"},
@@ -2748,6 +2748,29 @@ files = [
     {file = "regex-2026.5.9-cp314-cp314t-win_arm64.whl", hash = "sha256:5e41809d2683fcde7d5a8c87a6567ba1fb1ce0de9f31bff578de00a4b2d76daa"},
     {file = "regex-2026.5.9.tar.gz", hash = "sha256:a8234aa23ec39894bfe4a3f1b85616a7032481964a13ac6fc9f10de4f6fca270"},
 ]
+
+[[package]]
+name = "reportlab"
+version = "5.0.0"
+description = "The Reportlab Toolkit"
+optional = false
+python-versions = "<4,>=3.9"
+groups = ["main"]
+markers = "sys_platform == \"win32\" or sys_platform == \"emscripten\" or sys_platform != \"win32\" and sys_platform != \"emscripten\""
+files = [
+    {file = "reportlab-5.0.0-py3-none-any.whl", hash = "sha256:9d5a3affa84919e1111ede580031266a570e93b1ce388219621347965ff1d93c"},
+    {file = "reportlab-5.0.0.tar.gz", hash = "sha256:e4494a0c6623ae213bb856fba523171b2b54a7bf629fda02d5e525a7b899a784"},
+]
+
+[package.dependencies]
+charset-normalizer = "*"
+pillow = ">=9.0.0"
+
+[package.extras]
+accel = ["rl_accel (>=0.9.0,<1.1)"]
+bidi = ["rlbidi"]
+pycairo = ["freetype-py (>=2.3.0,<2.4)", "rlPyCairo (>=0.2.0,<1)"]
+shaping = ["uharfbuzz"]
 
 [[package]]
 name = "requests"
@@ -3640,37 +3663,34 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 
 [[package]]
 name = "xgboost"
-version = "2.1.4"
+version = "3.3.0"
 description = "XGBoost Python Package"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.12"
 groups = ["ml"]
 markers = "sys_platform == \"win32\" or sys_platform == \"emscripten\" or sys_platform != \"win32\" and sys_platform != \"emscripten\""
 files = [
-    {file = "xgboost-2.1.4-py3-none-macosx_10_15_x86_64.macosx_11_0_x86_64.macosx_12_0_x86_64.whl", hash = "sha256:78d88da184562deff25c820d943420342014dd55e0f4c017cc4563c2148df5ee"},
-    {file = "xgboost-2.1.4-py3-none-macosx_12_0_arm64.whl", hash = "sha256:523db01d4e74b05c61a985028bde88a4dd380eadc97209310621996d7d5d14a7"},
-    {file = "xgboost-2.1.4-py3-none-manylinux2014_aarch64.whl", hash = "sha256:57c7e98111aceef4b689d7d2ce738564a1f7fe44237136837a47847b8b33bade"},
-    {file = "xgboost-2.1.4-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f1343a512e634822eab30d300bfc00bf777dc869d881cc74854b42173cfcdb14"},
-    {file = "xgboost-2.1.4-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:d366097d0db047315736f46af852feaa907f6d7371716af741cdce488ae36d20"},
-    {file = "xgboost-2.1.4-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:8df6da72963969ab2bf49a520c3e147b1e15cbeddd3aa0e3e039b3532c739339"},
-    {file = "xgboost-2.1.4-py3-none-win_amd64.whl", hash = "sha256:8bbfe4fedc151b83a52edbf0de945fd94358b09a81998f2945ad330fd5f20cd6"},
-    {file = "xgboost-2.1.4.tar.gz", hash = "sha256:ab84c4bbedd7fae1a26f61e9dd7897421d5b08454b51c6eb072abc1d346d08d7"},
+    {file = "xgboost-3.3.0-py3-none-macosx_10_15_x86_64.whl", hash = "sha256:07688a377046b8640897b62421150bf73c6cc7101823474ec6ad08b93290f587"},
+    {file = "xgboost-3.3.0-py3-none-macosx_12_0_arm64.whl", hash = "sha256:af7cea10f418b7c251ddc8da440f57bdab2990b5fc9f74a35a92b0f150ea287d"},
+    {file = "xgboost-3.3.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:624a83aeb1e7ba081719795db179f4ce6fff12e79de05cd9baf15ee48fd22f0e"},
+    {file = "xgboost-3.3.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:f59edaf28eccd1c519788607c72ed907ee6cedfa933d706620bc1612d24b354e"},
+    {file = "xgboost-3.3.0-py3-none-win_amd64.whl", hash = "sha256:b06057f6a018fc04e6b3e0c15568ca636b8151a5b5f333478e500fcaf4fc7594"},
+    {file = "xgboost-3.3.0.tar.gz", hash = "sha256:58bcb8a4cace648cdab7b94fa4f16d2c9ff26d90dd4d26907168106fa06d8746"},
 ]
 
 [package.dependencies]
 numpy = "*"
-nvidia-nccl-cu12 = {version = "*", markers = "platform_system == \"Linux\" and platform_machine != \"aarch64\""}
+nvidia-nccl-cu12 = {version = "*", markers = "platform_system == \"Linux\""}
 scipy = "*"
 
 [package.extras]
 dask = ["dask", "distributed", "pandas"]
-datatable = ["datatable"]
 pandas = ["pandas (>=1.2)"]
 plotting = ["graphviz", "matplotlib"]
-pyspark = ["cloudpickle", "pyspark", "scikit-learn"]
+pyspark = ["cloudpickle", "pyspark (>=4.0)", "scikit-learn"]
 scikit-learn = ["scikit-learn"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "32915a9808792c8caca00d894b619392b13ccaef54d97dd35b2a09ad48bd72c8"
+content-hash = "c8715f4e7e2aa18e4c8d192619270d0bb3bc4f7996b0ab9a95242cb5ab4f480f"

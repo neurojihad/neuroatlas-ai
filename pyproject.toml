@@ -13,18 +13,21 @@ python-ulid = "^2.5.0"
 orjson = "^3.10.15"
 httpx = "^0.27.0"
 prometheus-client = "^0.20.0"
+reportlab = "^5.0.0"
 
 [tool.poetry.group.patients.dependencies]
 asyncpg = "^0.29.0"
 SQLAlchemy = "^2.0.29"
 
 [tool.poetry.group.ml.dependencies]
-# Heavy ML libs are declared here but the scaffold ships a light baseline
-# predictor so `make test` runs without compiling native wheels. Install this
-# group when you wire the real models.
+# XGBoost (PyPI wheels): https://xgboost.readthedocs.io/en/stable/install.html
+# Install: `poetry install --with ml` or `make install_ml`
+# macOS: install OpenMP first — `brew install libomp` (see upstream install guide).
 numpy = "^2.0.0"
+# scikit-learn: https://scikit-learn.org/stable/
+# Train/test split, CV, metrics, pipelines for offline training scripts.
 scikit-learn = "^1.5.0"
-xgboost = "^2.1.0"
+xgboost = "^3.3.0"
 shap = "^0.46.0"
 
 [tool.poetry.group.rag.dependencies]

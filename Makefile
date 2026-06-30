@@ -9,6 +9,9 @@ install:
 	pip install poetry
 	poetry install
 
+install_ml:
+	poetry install --with ml
+
 init:
 	@test -f infra/.env || cp infra/.env.example infra/.env
 
