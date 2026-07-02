@@ -30,5 +30,3 @@ Question sent:
 
 Status:
 Waiting for response.
-
-rwgbwebgerbe
