@@ -1,0 +1,13 @@
+# Reserved for release-time jobs (e.g. changelog generation on semver tags).
+# Include from .gitlab-ci.yml once scripts/changelog.py exists.
+#
+# changelog:
+#   stage: prepare
+#   image: $RUNNER_IMAGE
+#   script:
+#     - python scripts/changelog.py --tag "$CI_COMMIT_TAG"
+#   rules:
+#     - if: '$CI_COMMIT_TAG =~ /^[0-9]+\.[0-9]+\.[0-9]+?$/'
+#       when: manual
+#       allow_failure: true
+#     - when: never

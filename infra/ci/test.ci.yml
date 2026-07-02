@@ -1,0 +1,70 @@
+check:
+  interruptible: true
+  stage: test
+  image: ${RUNNER_IMAGE}
+  before_script:
+    - pip install poetry
+    - poetry install --with dev,test --no-root
+  script:
+    - make fmt_check
+    - make lint
+
+unit:
+  interruptible: true
+  stage: test
+  image: ${RUNNER_IMAGE}
+  before_script:
+    - pip install poetry
+    - poetry install --with dev,test --no-root
+  script:
+    - make test_in_ci
+  artifacts:
+    paths:
+      - coverage.xml
+      - reports/
+    reports:
+      junit: reports/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    expire_in: 1 week
+  coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
+
+sast:
+  interruptible: true
+  stage: test
+  image: ${RUNNER_IMAGE}
+  before_script:
+    - pip install bandit
+  script:
+    - make sast
+
+audit:
+  interruptible: true
+  stage: test
+  image: ${RUNNER_IMAGE}
+  before_script:
+    - pip install poetry
+    - poetry install --with dev --no-root
+  script:
+    - make pip_audit
+  allow_failure: true
+
+migrations:
+  interruptible: true
+  stage: test
+  image: ${RUNNER_IMAGE}
+  services:
+    - name: pgvector/pgvector:pg16
+      alias: postgres
+  variables:
+    POSTGRES_USER: neuroatlas
+    POSTGRES_PASSWORD: password
+    POSTGRES_DB: neuroatlas
+    POSTGRES_URI: postgresql+asyncpg://neuroatlas:password@postgres:5432/neuroatlas
+  before_script:
+    - pip install poetry
+    - poetry install --with housekeeper --no-root
+  script:
+    - make migrate
+    - make check_migrations
