@@ -119,10 +119,26 @@ test_housekeeper:
 test_messaging:
 	poetry run pytest src/common/tests/test_bus src/ml/tests/test_adapters
 
+test_in_ci:
+	mkdir -p reports
+	poetry run pytest src \
+		--cov=src \
+		--cov-report=xml:$(shell pwd)/coverage.xml \
+		--cov-report=term \
+		--junitxml=reports/junit.xml \
+		--rootdir=$(shell pwd) \
+		-n auto
+
+pip_audit:
+	poetry run pip-audit
+
 # Migrations (all run through Housekeeper; requires Postgres — run `make up_infra` first)
 
 migrate:
 	poetry run alembic upgrade head
+
+check_migrations:
+	poetry run alembic check
 
 makemigration:
 	poetry run alembic revision --autogenerate -m "${m}"

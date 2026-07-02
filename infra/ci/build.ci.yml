@@ -1,0 +1,98 @@
+.image:kaniko:
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  before_script:
+    - mkdir -p /kaniko/.docker
+    - |
+      echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" \
+        > /kaniko/.docker/config.json
+  script:
+    - /kaniko/executor
+        --context "${CONTEXT}"
+        --dockerfile "${DOCKERFILE}"
+        --destination "${CI_REGISTRY_IMAGE}${IMAGE_NAME}:${IMAGE_TAG}"
+        ${EXTRA_ARGS}
+
+.tagged-build:
+  variables:
+    EXTRA_ARGS: --build-arg=BASE_IMAGE=${BASE_IMAGE}
+    IMAGE_TAG: $CI_COMMIT_TAG
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^[0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9]*)?$/'
+
+build:patients:
+  stage: build
+  interruptible: true
+  extends:
+    - .image:kaniko
+  needs: ["check", "sast", "audit", "unit", "migrations"]
+  variables:
+    CONTEXT: .
+    DOCKERFILE: src/patients/Dockerfile
+    IMAGE_NAME: $PATIENTS_IMAGE_NAME
+    IMAGE_TAG: $BUILD_TAG
+    EXTRA_ARGS: --build-arg=BASE_IMAGE=${BASE_IMAGE}
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      changes:
+        - src/common/**/*
+        - src/patients/**/*
+        - pyproject.toml
+        - poetry.lock
+
+build:patients:tag:
+  extends:
+    - build:patients
+    - .tagged-build
+
+build:ml:
+  stage: build
+  interruptible: true
+  extends:
+    - .image:kaniko
+  needs: ["check", "sast", "audit", "unit", "migrations"]
+  variables:
+    CONTEXT: .
+    DOCKERFILE: src/ml/Dockerfile
+    IMAGE_NAME: $ML_IMAGE_NAME
+    IMAGE_TAG: $BUILD_TAG
+    EXTRA_ARGS: --build-arg=BASE_IMAGE=${BASE_IMAGE}
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      changes:
+        - src/common/**/*
+        - src/ml/**/*
+        - pyproject.toml
+        - poetry.lock
+
+build:ml:tag:
+  extends:
+    - build:ml
+    - .tagged-build
+
+build:housekeeper:
+  stage: build
+  interruptible: true
+  extends:
+    - .image:kaniko
+  needs: ["check", "sast", "audit", "unit", "migrations"]
+  variables:
+    CONTEXT: .
+    DOCKERFILE: src/housekeeper/Dockerfile
+    IMAGE_NAME: $HOUSEKEEPER_IMAGE_NAME
+    IMAGE_TAG: $BUILD_TAG
+    EXTRA_ARGS: --build-arg=BASE_IMAGE=${BASE_IMAGE}
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      changes:
+        - src/common/**/*
+        - src/housekeeper/**/*
+        - alembic.ini
+        - pyproject.toml
+        - poetry.lock
+
+build:housekeeper:tag:
+  extends:
+    - build:housekeeper
+    - .tagged-build
