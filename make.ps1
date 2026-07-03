@@ -1,6 +1,11 @@
-# Windows make shim — mirrors Makefile targets for PowerShell devs.
-# Usage: .\make.ps1 mr_body
-#        make mr_body   (when venv make wrapper points here)
+# Windows make shim - mirrors Makefile targets for PowerShell (paymentgate-style).
+# Do NOT paste Makefile lines into PowerShell; use this script instead.
+#
+#   .\make.ps1 up_infra
+#   .\make.ps1 migrate
+#   .\make.ps1 run_patients
+#
+# Or from repo root:  make.cmd up_infra
 
 param(
     [Parameter(Position = 0)]
@@ -13,9 +18,104 @@ param(
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
+function Import-DotEnv {
+    param([string]$Path)
+
+    if (-not (Test-Path $Path)) {
+        return
+    }
+    Get-Content $Path | ForEach-Object {
+        $line = $_.Trim()
+        if (-not $line -or $line.StartsWith("#")) {
+            return
+        }
+        $eq = $line.IndexOf("=")
+        if ($eq -lt 1) {
+            return
+        }
+        $name = $line.Substring(0, $eq).Trim()
+        $value = $line.Substring($eq + 1).Trim()
+        if ($value.StartsWith('"') -and $value.EndsWith('"')) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        Set-Item -Path "Env:$name" -Value $value
+    }
+}
+
+function Initialize-MakeEnvironment {
+    $src = Join-Path $PSScriptRoot "src"
+    if ($env:PYTHONPATH) {
+        $env:PYTHONPATH = "$src;$($env:PYTHONPATH)"
+    } else {
+        $env:PYTHONPATH = $src
+    }
+    Import-DotEnv (Join-Path $PSScriptRoot "infra\.env")
+}
+
 function Write-Step {
     param([string]$Message)
     Write-Host $Message
+}
+
+$script:DockerPathInitialized = $false
+
+function Add-DirectoryToPath {
+    param([string]$Directory)
+
+    if (-not $Directory -or -not (Test-Path $Directory)) {
+        return
+    }
+    $parts = $env:PATH -split ';' | Where-Object { $_ -and ($_ -ne $Directory) }
+    $env:PATH = ($Directory, ($parts -join ';') | Where-Object { $_ }) -join ';'
+}
+
+function Initialize-DockerPath {
+    if ($script:DockerPathInitialized) {
+        return
+    }
+
+    foreach ($binDir in @(
+            "${env:ProgramFiles}\Docker\Docker\resources\bin"
+            "${env:ProgramFiles(x86)}\Docker\Docker\resources\bin"
+            "${env:ProgramFiles}\Docker\Docker\cli-plugins"
+            "${env:LOCALAPPDATA}\Docker\cli-plugins"
+        )) {
+        Add-DirectoryToPath $binDir
+    }
+
+    $script:DockerPathInitialized = $true
+}
+
+function Resolve-DockerExecutable {
+    Initialize-DockerPath
+
+    $cmd = Get-Command docker -ErrorAction SilentlyContinue
+    if ($cmd) {
+        return $cmd.Source
+    }
+
+    foreach ($candidate in @(
+            "${env:ProgramFiles}\Docker\Docker\resources\bin\docker.exe"
+            "${env:ProgramFiles(x86)}\Docker\Docker\resources\bin\docker.exe"
+        )) {
+        if (Test-Path $candidate) {
+            Add-DirectoryToPath (Split-Path $candidate -Parent)
+            return $candidate
+        }
+    }
+
+    throw @'
+docker was not found in PATH or Docker Desktop default locations.
+
+Install Docker Desktop for Windows:
+  https://docs.docker.com/desktop/setup/install/windows-install/
+
+Start Docker Desktop, then open a NEW PowerShell window and retry.
+
+Do not paste Makefile lines like "$(COMPOSE_INFRA) --profile storage up -d" into PowerShell - run:
+  .\make.ps1 up_infra
+  make.cmd up_infra
+'@
 }
 
 function Invoke-PoetryRun {
@@ -23,6 +123,7 @@ function Invoke-PoetryRun {
 
     if (Get-Command poetry -ErrorAction SilentlyContinue) {
         & poetry run @Command
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         return
     }
 
@@ -32,10 +133,11 @@ function Invoke-PoetryRun {
             $Command = $Command[1..($Command.Length - 1)]
         }
         & $venvPython @Command
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         return
     }
 
-    throw "Poetry or .venv not found. Run: pip install poetry; poetry install"
+    throw "Poetry or .venv not found. Run: .\make.ps1 install"
 }
 
 function Invoke-Compose {
@@ -44,7 +146,11 @@ function Invoke-Compose {
         [switch]$Infra
     )
 
+    $docker = Resolve-DockerExecutable
     $envFile = Join-Path $PSScriptRoot "infra\.env"
+    if (-not (Test-Path $envFile)) {
+        throw "Missing infra/.env. Run: .\make.ps1 init"
+    }
     $composeFile = if ($Infra) {
         Join-Path $PSScriptRoot "infra\infra.compose.yml"
     } else {
@@ -52,18 +158,43 @@ function Invoke-Compose {
     }
 
     $args = @("compose", "--env-file", $envFile, "-f", $composeFile) + $ComposeArgs
-    & docker @args
+    & $docker @args
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
+
+Initialize-MakeEnvironment
 
 switch ($Target) {
     "help" {
-        Write-Step @"
-NeuroAtlas Windows make shim. Examples:
-  .\make.ps1 mr_body
-  .\make.ps1 setup_hooks
-  .\make.ps1 test
-  .\make.ps1 lint
-"@
+        Write-Step @'
+NeuroAtlas Windows make shim (mirrors Makefile).
+
+Infra / Docker:
+  .\make.ps1 init              copy infra/.env.example to infra/.env
+  .\make.ps1 up_infra          Postgres + Kafka + Keycloak
+  .\make.ps1 down_infra
+  .\make.ps1 up_app            build and start app services
+  .\make.ps1 down_app
+  .\make.ps1 up                up_infra then up_app
+  .\make.ps1 down              down_app then down_infra
+  .\make.ps1 up_pat / down_pat / up_ml / down_ml / up_hk / down_hk
+  .\make.ps1 kafka_topics
+  .\make.ps1 kafka_logs
+
+Run locally (no Docker):
+  .\make.ps1 run_patients      port 8001
+  .\make.ps1 run_ml            port 8002
+  .\make.ps1 run_housekeeper   port 8003
+
+DB:
+  .\make.ps1 migrate           alembic upgrade head (needs up_infra)
+  .\make.ps1 makemigration -m "add table"
+
+Quality:
+  .\make.ps1 test / lint / fmt / check / sast
+
+Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
+'@
     }
 
     "init" {
@@ -131,9 +262,39 @@ NeuroAtlas Windows make shim. Examples:
         & $PSCommandPath down_infra
     }
 
+    "up_pat" {
+        Invoke-Compose @("up", "-d", "--build", "patients")
+    }
+
+    "down_pat" {
+        Invoke-Compose @("stop", "patients")
+    }
+
+    "up_ml" {
+        Write-Step "ML Kafka consumer is active only when KAFKA_ENABLED=true in infra/.env"
+        Invoke-Compose @("up", "-d", "--build", "ml")
+    }
+
+    "down_ml" {
+        Invoke-Compose @("stop", "ml")
+    }
+
+    "up_hk" {
+        Invoke-Compose @("up", "-d", "--build", "housekeeper")
+    }
+
+    "down_hk" {
+        Invoke-Compose @("stop", "housekeeper")
+    }
+
     "kafka_topics" {
         $env:KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
-        Invoke-PoetryRun python infra/kafka/init_topics.py
+        Invoke-PoetryRun --with messaging python infra/kafka/init_topics.py
+    }
+
+    "kafka_logs" {
+        $docker = Resolve-DockerExecutable
+        & $docker logs -f kafka_neuroatlas
     }
 
     "fmt" {

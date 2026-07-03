@@ -292,6 +292,7 @@ Detailed diagrams live under [`docs/diagrams/`](diagrams/):
 | Diagram | Description |
 |---------|-------------|
 | [auth-architecture.md](diagrams/auth-architecture.md) | Components and module layout |
+| [auth-keycloak-user-registration.md](diagrams/auth-keycloak-user-registration.md) | Admin provisions users in Keycloak (full sequence) |
 | [auth-request-flow.md](diagrams/auth-request-flow.md) | Sequence for authenticated requests |
 | [auth-users-schema.md](diagrams/auth-users-schema.md) | Shadow `users` table |
 | [auth-jit-upsert.md](diagrams/auth-jit-upsert.md) | Login-time user sync |
@@ -348,6 +349,8 @@ Responsibilities:
 * Realm roles (`clinician`, `researcher`, `admin`)
 
 Local development: `make up_infra` (includes `--profile storage` for Keycloak on `:8080`).
+
+Step-by-step admin user registration: [auth-keycloak-user-registration.md](diagrams/auth-keycloak-user-registration.md).
 
 ---
 

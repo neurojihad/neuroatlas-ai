@@ -1,3 +1,9 @@
+# Linux/macOS/CI: use GNU make (e.g. `make up_infra`).
+# Windows PowerShell: do NOT paste $(COMPOSE_*) lines into the shell — use:
+#   .\make.ps1 up_infra
+#   make.cmd up_infra
+# See make.ps1 for the full target list.
+
 -include infra/.env
 export
 
@@ -59,7 +65,7 @@ down_infra:
 	$(COMPOSE_INFRA) --profile storage down
 
 kafka_topics:
-	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run python infra/kafka/init_topics.py
+	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run --with messaging python infra/kafka/init_topics.py
 
 kafka_logs:
 	docker logs -f kafka_neuroatlas

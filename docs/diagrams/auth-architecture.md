@@ -51,6 +51,7 @@ flowchart TB
 ## Related diagrams
 
 - [Request flow](./auth-request-flow.md)
+- [Keycloak user registration (admin)](./auth-keycloak-user-registration.md)
 - [Users schema](./auth-users-schema.md)
 - [JIT upsert](./auth-jit-upsert.md)
 - [PaymentGate comparison](./auth-paymentgate-comparison.md)
