@@ -1,8 +1,13 @@
+.install_make:
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends make && rm -rf /var/lib/apt/lists/*
+
 check:
   interruptible: true
   stage: test
   image: ${RUNNER_IMAGE}
   before_script:
+    - !reference [.install_make, before_script]
     - pip install poetry
     - poetry install --with dev,test --no-root
   script:
@@ -14,6 +19,7 @@ unit:
   stage: test
   image: ${RUNNER_IMAGE}
   before_script:
+    - !reference [.install_make, before_script]
     - pip install poetry
     - poetry install --with dev,test --no-root
   script:
@@ -35,7 +41,9 @@ sast:
   stage: test
   image: ${RUNNER_IMAGE}
   before_script:
-    - pip install bandit
+    - !reference [.install_make, before_script]
+    - pip install poetry
+    - poetry install --with dev --no-root
   script:
     - make sast
 
@@ -44,6 +52,7 @@ audit:
   stage: test
   image: ${RUNNER_IMAGE}
   before_script:
+    - !reference [.install_make, before_script]
     - pip install poetry
     - poetry install --with dev --no-root
   script:
@@ -63,6 +72,7 @@ migrations:
     POSTGRES_DB: neuroatlas
     POSTGRES_URI: postgresql+asyncpg://neuroatlas:password@postgres:5432/neuroatlas
   before_script:
+    - !reference [.install_make, before_script]
     - pip install poetry
     - poetry install --with housekeeper --no-root
   script:

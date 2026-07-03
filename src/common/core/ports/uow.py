@@ -1,4 +1,5 @@
 import abc
+from typing import Self
 
 
 class UnitOfWork(abc.ABC):
@@ -8,7 +9,7 @@ class UnitOfWork(abc.ABC):
     The domain only ever depends on this interface.
     """
 
-    async def __aenter__(self) -> "UnitOfWork":
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
