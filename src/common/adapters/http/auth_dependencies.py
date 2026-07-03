@@ -22,10 +22,9 @@ async def get_current_user(request: Request) -> UserInfo:
     settings = request.app.state.settings
     auth_manager: AuthAdapter = request.app.state.auth_manager
     if settings.auth_enabled:
-        token = _extract_bearer_token(request)
+        user = await auth_manager.get_user(_extract_bearer_token(request))
     else:
-        token = ""
-    user = await auth_manager.get_user(token)
+        user = await auth_manager.get_user("")
     upsert_user: UpsertUserFn | None = getattr(request.app.state, "upsert_user", None)
     if upsert_user is not None:
         await upsert_user(user)
