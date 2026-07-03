@@ -44,10 +44,10 @@ up: up_infra up_app
 down: down_app down_infra
 
 up_infra:
-	$(COMPOSE_INFRA) up -d
+	$(COMPOSE_INFRA) --profile storage up -d
 
 down_infra:
-	$(COMPOSE_INFRA) down
+	$(COMPOSE_INFRA) --profile storage down
 
 kafka_topics:
 	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run python infra/kafka/init_topics.py
