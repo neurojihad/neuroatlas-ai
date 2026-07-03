@@ -1,6 +1,10 @@
 from typing import Any
 
-from common.adapters.auth.base import BaseAuthManager, extract_realm_roles, strip_bearer_prefix
+from common.adapters.auth.base import (
+    BaseAuthManager,
+    extract_realm_roles,
+    strip_bearer_prefix,
+)
 from common.application.settings import Settings
 from common.core.entities.user import AuthTokenData, UserInfo
 from common.core.exceptions import AuthException

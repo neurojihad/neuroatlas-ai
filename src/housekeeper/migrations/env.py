@@ -17,12 +17,12 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy.engine import Connection
 
+# --- Future model imports ---------------------------------------------------
+import common.adapters.database.models.user  # noqa: F401
 from common.database.base import Base
 from common.database.engine import build_engine
 from housekeeper.settings import settings
 
-# --- Future model imports ---------------------------------------------------
-import common.adapters.database.models.user  # noqa: F401
 # Import each service's ORM model module here so autogenerate sees its tables,
 # e.g. `import patients.adapters.database.models  # noqa: F401`.
 # ---------------------------------------------------------------------------
