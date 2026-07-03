@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Refresh MR_BODY.md before every push (Fixed / Changed / Added from branch commits).
+set -uo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT" || exit 0
+
+if command -v poetry >/dev/null 2>&1; then
+  poetry run python scripts/generate_mr_body.py || true
+elif command -v python3 >/dev/null 2>&1; then
+  python3 scripts/generate_mr_body.py || true
+elif command -v python >/dev/null 2>&1; then
+  python scripts/generate_mr_body.py || true
+fi
+exit 0

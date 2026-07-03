@@ -29,3 +29,6 @@ models/
 
 # Private data
 docs/private/
+
+# Auto-generated MR description (refreshed on git push)
+MR_BODY.md

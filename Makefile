@@ -14,6 +14,15 @@ install_ml:
 
 init:
 	@test -f infra/.env || cp infra/.env.example infra/.env
+	@$(MAKE) setup_hooks
+
+setup_hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-push .cursor/hooks/pre-push-mr-body.sh 2>/dev/null || true
+	@echo "Git hooks installed (.githooks/pre-push refreshes MR_BODY.md on push)."
+
+mr_body:
+	poetry run python scripts/generate_mr_body.py
 
 # Run services locally (in-memory adapters, no infra required)
 # Local and compose targets load variables from infra/.env (see -include above).
