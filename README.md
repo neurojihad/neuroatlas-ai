@@ -120,6 +120,17 @@ Unified Platform
 
 ---
 
+## Project tracking (Jira)
+
+Implementation work is tracked in **[NeuroAtlas on Jira](https://neurojihad.atlassian.net)** — epics, stories, and sprint planning for backend services, RAG pipeline, ML, and infrastructure.
+
+Local backlog reference (ticket names and epics to create in Jira):
+
+- [`docs/jira/plan.md`](docs/jira/plan.md) — suggested keys (`NLS-EPIC-*`, `NLS-101` …) and milestone order
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#12-microservice-architecture-alignment) §12 — microservice alignment status (Implemented / Partial / Planned)
+
+---
+
 ## Disclaimer
 
 NeuroAtlas AI is a research project and is not intended for diagnosis or clinical decision-making.

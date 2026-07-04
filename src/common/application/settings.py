@@ -23,3 +23,11 @@ class Settings:
     kafka_client_id: str = os.getenv("KAFKA_CLIENT_ID", "neuroatlas")
     kafka_consumer_group: str = os.getenv("KAFKA_CONSUMER_GROUP", "neuroatlas")
     kafka_enabled: bool = _env_bool("KAFKA_ENABLED", False)
+    auth_enabled: bool = _env_bool("AUTH_ENABLED", False)
+    oidc_jwks_url: str = os.getenv(
+        "OIDC_JWKS_URL",
+        "http://localhost:8080/realms/neuroatlas/protocol/openid-connect/certs",
+    )
+    oidc_issuer: str = os.getenv("OIDC_ISSUER", "http://localhost:8080/realms/neuroatlas")
+    oidc_audience: str = os.getenv("OIDC_AUDIENCE", "neuroatlas-api")
+    user_upsert_enabled: bool = _env_bool("USER_UPSERT_ENABLED", True)
