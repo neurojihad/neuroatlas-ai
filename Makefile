@@ -33,6 +33,9 @@ mr_body:
 # Run services locally (in-memory adapters, no infra required)
 # Local and compose targets load variables from infra/.env (see -include above).
 
+run_admin_ui:
+	poetry run uvicorn admin_ui.main:app --host 0.0.0.0 --port 8000 --reload
+
 run_patients:
 	poetry run uvicorn patients.main:app --host 0.0.0.0 --port 8001 --reload
 
@@ -121,6 +124,9 @@ check: fmt lint test
 
 test:
 	poetry run pytest src
+
+test_admin_ui:
+	poetry run pytest src/admin_ui --cov=src/admin_ui
 
 test_patients:
 	poetry run pytest src/patients --cov=src/patients

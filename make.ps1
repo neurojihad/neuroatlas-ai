@@ -182,6 +182,7 @@ Infra / Docker:
   .\make.ps1 kafka_logs
 
 Run locally (no Docker):
+  .\make.ps1 run_admin_ui     port 8000
   .\make.ps1 run_patients      port 8001
   .\make.ps1 run_ml            port 8002
   .\make.ps1 run_housekeeper   port 8003
@@ -222,6 +223,10 @@ Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
 
     "install_ml" {
         poetry install --with ml
+    }
+
+    "run_admin_ui" {
+        Invoke-PoetryRun uvicorn admin_ui.main:app --host 0.0.0.0 --port 8000 --reload
     }
 
     "run_patients" {
@@ -328,6 +333,10 @@ Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
 
     "test" {
         Invoke-PoetryRun pytest src
+    }
+
+    "test_admin_ui" {
+        Invoke-PoetryRun pytest src/admin_ui --cov=src/admin_ui
     }
 
     "test_patients" {
