@@ -123,15 +123,15 @@ Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT dire
 
 | Ref | Jira | Epic | Title | Status |
 |-----|------|------|-------|--------|
-| NLS-ADMIN-01 | *(run create_admin_ui_tasks.ps1)* | EPIC-01 | `admin_ui` service scaffold (`src/admin_ui/`) | Open |
-| NLS-ADMIN-02 | | EPIC-03 | Keycloak `neuroatlas-ui` client (admin_ui callback) | Open |
-| NLS-ADMIN-03 | | EPIC-01 | OIDC auth handlers (token, refresh, logout, `/auth/me`) | Open |
-| NLS-ADMIN-04 | | EPIC-01 | Guard proxy `/guard/api/v1/*` → patients / ml | Open |
-| NLS-ADMIN-05 | | EPIC-08 | React admin UI (auth pages + patients MVP) | Open |
-| NLS-ADMIN-06 | | EPIC-01 | Static SPA serving + `window._env_` | Open |
-| NLS-ADMIN-07 | | EPIC-01 | Docker compose: `admin_ui` on port 8000 | Open |
-| NLS-ADMIN-08 | | EPIC-02 | E2E smoke: browser login → patients + JIT row | Open |
-| NLS-ADMIN-09 | | EPIC-03 | Auth diagram: admin_ui BFF flow | Open |
+| NLS-ADMIN-01 | NLS-61 | EPIC-01 | `admin_ui` service scaffold (`src/admin_ui/`) | Open |
+| NLS-ADMIN-02 | NLS-62 | EPIC-03 | Keycloak `neuroatlas-ui` client (admin_ui callback) | Open |
+| NLS-ADMIN-03 | NLS-63 | EPIC-01 | OIDC auth handlers (token, refresh, logout, `/auth/me`) | Open |
+| NLS-ADMIN-04 | NLS-64 | EPIC-01 | Guard proxy `/guard/api/v1/*` → patients / ml | Open |
+| NLS-ADMIN-05 | NLS-65 | EPIC-08 | React admin UI (auth pages + patients MVP) | Open |
+| NLS-ADMIN-06 | NLS-66 | EPIC-01 | Static SPA serving + `window._env_` | Open |
+| NLS-ADMIN-07 | NLS-67 | EPIC-01 | Docker compose: `admin_ui` on port 8000 | Open |
+| NLS-ADMIN-08 | NLS-68 | EPIC-02 | E2E smoke: browser login → patients + JIT row | Open |
+| NLS-ADMIN-09 | NLS-69 | EPIC-03 | Auth diagram: admin_ui BFF flow | Open |
 
 Create in Jira: `.\scripts\jira\create_admin_ui_tasks.ps1` (adds to Sprint Pioneer id 35).
 

@@ -45,15 +45,15 @@ sequenceDiagram
 
 | # | plan ref | Jira | Summary | Epic | Depends on |
 |---|----------|------|---------|------|------------|
-| 5 | NLS-ADMIN-01 | *(create script)* | `admin_ui` scaffold (`src/admin_ui/`) | NLS-6 | — |
-| 6 | NLS-ADMIN-02 | | Keycloak `neuroatlas-ui` client | NLS-8 | NLS-14 |
-| 7 | NLS-ADMIN-03 | | OIDC auth handlers (token, refresh, logout, `/auth/me`) | NLS-6 | NLS-ADMIN-02 |
-| 8 | NLS-ADMIN-04 | | Guard proxy `/guard/api/v1/*` | NLS-6 | NLS-ADMIN-01 |
-| 9 | NLS-ADMIN-05 | | React admin UI (auth + patients MVP) | NLS-13 | NLS-ADMIN-03 |
-| 10 | NLS-ADMIN-06 | | Static SPA serving + `_env_` | NLS-6 | NLS-ADMIN-05 |
-| 11 | NLS-ADMIN-07 | | Docker compose `admin_ui` on :8000 | NLS-6 | NLS-ADMIN-04 |
-| 12 | NLS-ADMIN-08 | | E2E smoke via admin_ui | NLS-7 | NLS-ADMIN-03, NLS-17 |
-| 13 | NLS-ADMIN-09 | | Auth diagram (admin_ui flow) | NLS-8 | — |
+| 5 | NLS-ADMIN-01 | NLS-61 | `admin_ui` scaffold (`src/admin_ui/`) | NLS-6 | — |
+| 6 | NLS-ADMIN-02 | NLS-62 | Keycloak `neuroatlas-ui` client | NLS-8 | NLS-14 |
+| 7 | NLS-ADMIN-03 | NLS-63 | OIDC auth handlers (token, refresh, logout, `/auth/me`) | NLS-6 | NLS-62 |
+| 8 | NLS-ADMIN-04 | NLS-64 | Guard proxy `/guard/api/v1/*` | NLS-6 | NLS-61 |
+| 9 | NLS-ADMIN-05 | NLS-65 | React admin UI (auth + patients MVP) | NLS-13 | NLS-63 |
+| 10 | NLS-ADMIN-06 | NLS-66 | Static SPA serving + `_env_` | NLS-6 | NLS-65 |
+| 11 | NLS-ADMIN-07 | NLS-67 | Docker compose `admin_ui` on :8000 | NLS-6 | NLS-64 |
+| 12 | NLS-ADMIN-08 | NLS-68 | E2E smoke via admin_ui | NLS-7 | NLS-63, NLS-17 |
+| 13 | NLS-ADMIN-09 | NLS-69 | Auth diagram (admin_ui flow) | NLS-8 | — |
 
 **Legacy (superseded for browser):** NLS-GW-01..10 (Jira NLS-50..59) — keep for audit; link to NLS-ADMIN-* when created.
 
