@@ -113,7 +113,7 @@ Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT dire
 | NLS-GW-07 | NLS-56 | EPIC-08 | Frontend Keycloak browser login (redirect / PKCE or gateway session) | Open |
 | NLS-GW-08 | NLS-57 | EPIC-08 | Frontend calls API only via gateway base URL | Open |
 | NLS-GW-09 | NLS-58 | EPIC-01 | `application.compose.yml`: gateway on stack (port 8000) | Open |
-| NLS-GW-10 | NLS-59 | EPIC-03 | Doc: `auth-browser-gateway-flow.md` sequence diagram | Open |
+| NLS-GW-10 | NLS-59 | EPIC-03 | Doc: `auth-browser-gateway-flow.md` sequence diagram | Partial |
 
 **Overlap:** NLS-101..103 and NLS-802..803 remain umbrella stories; close or link when NLS-GW-* are Done.
 

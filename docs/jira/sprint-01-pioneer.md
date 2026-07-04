@@ -126,8 +126,9 @@ Verify sprint membership:
 - [ ] Credentials/cookies sent per same-site rules
 
 ### NLS-59 / NLS-GW-10 — Documentation
-- [ ] New diagram under `docs/diagrams/auth-browser-gateway-flow.md`
-- [ ] Linked from `ARCHITECTURE.md` §5 and `plan.md`
+- [x] New diagram under `docs/diagrams/auth-browser-gateway-flow.md`
+- [x] Linked from `ARCHITECTURE.md` §5 and related auth diagrams
+- [ ] Linked from `plan.md` status column when story moves to Done
 
 ---
 
