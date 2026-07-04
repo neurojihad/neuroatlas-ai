@@ -62,7 +62,8 @@ flowchart TB
 
 | Path | Client | Token at backend | Status |
 |------|--------|------------------|--------|
-| **Browser / UI** | Frontend → Gateway | Keycloak JWT (forwarded by gateway) | Pioneer target (NLS-GW-*) |
+| **Browser / UI + gateway edge** | UI exchanges code; Browser → Gateway with Bearer | JWT validated at gateway; forwarded to services | Phase 2 (see [browser flow § Phase 2](./auth-browser-gateway-flow.md#phase-2-ui-login--gateway-edge-validation)) |
+| **Unified BFF** | Frontend → Gateway cookie session | Keycloak JWT forwarded by gateway | Pioneer target (NLS-GW-*) |
 | **Direct API** | curl / Swagger → patients | Keycloak JWT in `Authorization` header | Supported today (dev smoke) |
 | **Auth disabled** | Any | `NullAuthAdapter` dev user | Local tests (`AUTH_ENABLED=false`) |
 

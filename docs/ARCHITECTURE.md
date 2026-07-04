@@ -292,7 +292,7 @@ Detailed diagrams live under [`docs/diagrams/`](diagrams/):
 | Diagram | Description |
 |---------|-------------|
 | [auth-architecture.md](diagrams/auth-architecture.md) | Components, gateway + backend layout |
-| [auth-browser-gateway-flow.md](diagrams/auth-browser-gateway-flow.md) | **Target:** browser OIDC via gateway BFF (PKCE, session, JWT forward) |
+| [auth-browser-gateway-flow.md](diagrams/auth-browser-gateway-flow.md) | Browser OIDC: UI token exchange + gateway edge validation; unified BFF variant |
 | [auth-keycloak-user-registration.md](diagrams/auth-keycloak-user-registration.md) | Admin provisions users in Keycloak (full sequence) |
 | [auth-request-flow.md](diagrams/auth-request-flow.md) | Backend JWT validation (direct or gateway-forwarded) |
 | [auth-users-schema.md](diagrams/auth-users-schema.md) | Shadow `users` table |

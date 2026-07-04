@@ -4,7 +4,8 @@ This sequence runs **inside each backend service** (patients, ml, …) after a K
 arrives in the `Authorization` header. It is the same whether the client sent the token
 **directly** (curl, Swagger) or the **gateway forwarded** it from a browser session.
 
-For the browser login and proxy path, see [Browser login via gateway](./auth-browser-gateway-flow.md).
+For the browser login and proxy path, see [Browser login via gateway](./auth-browser-gateway-flow.md)
+(including **Phase 2**: UI token exchange, gateway JWT validation, then proxy to backends).
 
 `/health` remains public on every service.
 
