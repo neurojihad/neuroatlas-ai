@@ -18,6 +18,9 @@ param(
     [Parameter(Position = 1)]
     [string]$Arg1,
 
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$RemainingArgs,
+
     [string]$Type = "Story",
     [string]$Summary,
     [string]$Epic,
@@ -368,7 +371,49 @@ switch ($Command.ToLowerInvariant()) {
         Write-Output ("Started: {0} (id {1}) [{2}]" -f $result.name, $result.id, $result.state)
     }
 
+    "sprint-add" {
+        if (-not $Arg1) {
+            throw "Usage: jira_api.ps1 sprint-add <sprint_id> <issue_key> [<issue_key> ...]"
+        }
+        $issueKeys = @($RemainingArgs)
+        if ($issueKeys.Count -eq 0) {
+            throw "Provide at least one issue key after the sprint id."
+        }
+        $body = @{ issues = $issueKeys }
+        Invoke-JiraRequest -Method POST -Path ("/rest/agile/1.0/sprint/{0}/issue" -f $Arg1) -Body $body | Out-Null
+        foreach ($key in $issueKeys) {
+            Write-Output ("Added {0} to sprint {1}" -f $key, $Arg1)
+        }
+    }
+
+    "sprint-update-goal" {
+        if (-not $Arg1) {
+            throw "Usage: jira_api.ps1 sprint-update-goal <sprint_id> -Description ""new goal text"""
+        }
+        $goalText = Get-DescriptionText
+        if (-not $goalText) {
+            throw "Provide -Description for the sprint goal."
+        }
+        $current = Invoke-JiraRequest -Method GET -Path ("/rest/agile/1.0/sprint/{0}" -f $Arg1)
+        $body = @{
+            name = $current.name
+            goal = $goalText.Trim()
+        }
+        if ($current.state) {
+            $body["state"] = $current.state
+        }
+        if ($current.startDate) {
+            $body["startDate"] = $current.startDate
+        }
+        if ($current.endDate) {
+            $body["endDate"] = $current.endDate
+        }
+        $result = Invoke-JiraRequest -Method PUT -Path ("/rest/agile/1.0/sprint/{0}" -f $Arg1) -Body $body
+        Write-Output ("Updated sprint {0} (id {1})" -f $result.name, $result.id)
+        Write-Output ("Goal: {0}" -f $result.goal)
+    }
+
     default {
-        throw "Unknown command '$Command'. Use: search, get, create, transitions, comment, boards, projects, verify, sprints, sprint-issues, start-sprint"
+        throw "Unknown command '$Command'. Use: search, get, create, transitions, comment, boards, projects, verify, sprints, sprint-issues, start-sprint, sprint-add, sprint-update-goal"
     }
 }
