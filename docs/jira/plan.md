@@ -113,11 +113,27 @@ Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT dire
 | NLS-GW-07 | NLS-56 | EPIC-08 | Frontend Keycloak browser login (redirect / PKCE or gateway session) | Open |
 | NLS-GW-08 | NLS-57 | EPIC-08 | Frontend calls API only via gateway base URL | Open |
 | NLS-GW-09 | NLS-58 | EPIC-01 | `application.compose.yml`: gateway on stack (port 8000) | Open |
-| NLS-GW-10 | NLS-59 | EPIC-03 | Doc: `auth-browser-gateway-flow.md` sequence diagram | Open |
+| NLS-GW-10 | NLS-59 | EPIC-03 | Doc: `auth-browser-gateway-flow.md` sequence diagram | Partial |
 
 **Overlap:** NLS-101..103 and NLS-802..803 remain umbrella stories; close or link when NLS-GW-* are Done.
 
 **Out of Pioneer:** NLS-104 (Redis rate limit), full auth removal from service handlers (optional follow-up).
+
+**Pioneer pivot (admin_ui):** Browser entry is **`admin_ui` BFF** (PaymentGate-style embedded React + auth handlers on port 8000), not standalone `gateway` + Next.js. Stories **NLS-ADMIN-01..09** supersede NLS-GW-* for the browser path; NLS-GW-* remain for traceability until closed or linked.
+
+| Ref | Jira | Epic | Title | Status |
+|-----|------|------|-------|--------|
+| NLS-ADMIN-01 | NLS-61 | EPIC-01 | `admin_ui` service scaffold (`src/admin_ui/`) | Open |
+| NLS-ADMIN-02 | NLS-62 | EPIC-03 | Keycloak `neuroatlas-ui` client (admin_ui callback) | Open |
+| NLS-ADMIN-03 | NLS-63 | EPIC-01 | OIDC auth handlers (token, refresh, logout, `/auth/me`) | Open |
+| NLS-ADMIN-04 | NLS-64 | EPIC-01 | Guard proxy `/guard/api/v1/*` → patients / ml | Open |
+| NLS-ADMIN-05 | NLS-65 | EPIC-08 | React admin UI (auth pages + patients MVP) | Open |
+| NLS-ADMIN-06 | NLS-66 | EPIC-01 | Static SPA serving + `window._env_` | Open |
+| NLS-ADMIN-07 | NLS-67 | EPIC-01 | Docker compose: `admin_ui` on port 8000 | Open |
+| NLS-ADMIN-08 | NLS-68 | EPIC-02 | E2E smoke: browser login → patients + JIT row | Open |
+| NLS-ADMIN-09 | NLS-69 | EPIC-03 | Auth diagram: admin_ui BFF flow | Open |
+
+Create in Jira: `.\scripts\jira\create_admin_ui_tasks.ps1` (adds to Sprint Pioneer id 35).
 
 ---
 
@@ -126,10 +142,11 @@ Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT dire
 ### Milestone M1 — Runnable clinical API
 - NLS-201, NLS-202, NLS-301, NLS-302
 
-### Milestone M2 — Gateway + browser auth (Pioneer extension)
-- NLS-GW-01 → NLS-GW-02 → NLS-GW-03 → NLS-GW-04 → NLS-GW-05 → NLS-GW-06
-- Parallel when gateway auth routes exist: NLS-GW-07, NLS-GW-08
-- NLS-GW-09, NLS-GW-10 alongside infra work
+### Milestone M2 — admin_ui BFF + browser auth (Pioneer extension)
+- NLS-ADMIN-01 → NLS-ADMIN-02 → NLS-ADMIN-03 → NLS-ADMIN-04 → NLS-ADMIN-06 → NLS-ADMIN-07 → NLS-ADMIN-08
+- Parallel when `/auth/me` works: NLS-ADMIN-05 (React UI)
+- NLS-ADMIN-09 alongside docs
+- Legacy gateway path (NLS-GW-01..10): superseded by NLS-ADMIN-* for browser; keep for audit until linked/closed
 
 ### Milestone M3 — Event-driven ML path
 - NLS-401, NLS-601, NLS-403
@@ -140,7 +157,7 @@ Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT dire
 
 **Sprint 01 — Pioneer** (M1 + gateway/browser auth extension, Jira sprint id 35): see [`sprint-01-pioneer.md`](sprint-01-pioneer.md)
 
-**Sprint goal:** Postgres-backed patients API with Keycloak auth, JIT user upsert, and **browser login through gateway** proxying Keycloak JWT to backend services.
+**Sprint goal:** Postgres-backed patients API with Keycloak auth, JIT user upsert, and **browser login through `admin_ui` BFF** (port 8000) proxying Keycloak JWT to backend services.
 
 Full backlog keys: [`backlog-keys.md`](backlog-keys.md) (45 stories + 8 epics incl. NLS-GW-01..10).
 

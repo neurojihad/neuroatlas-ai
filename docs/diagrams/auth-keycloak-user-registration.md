@@ -27,9 +27,9 @@ sequenceDiagram
     Admin->>KC: User record persisted in Keycloak
 
     Note over User,DB: First login / API access
-    User->>KC: Obtain access token (UI login or token endpoint)
+    User->>KC: Obtain access token (browser via gateway, or dev token endpoint)
     KC-->>User: JWT (sub, email, realm_access.roles, aud)
-    User->>API: Request + Authorization Bearer JWT
+    User->>API: Request + Authorization Bearer JWT (direct or gateway-forwarded)
     API->>KC: Verify signature via JWKS
     API->>API: Check iss, aud, exp, realm roles
     opt USER_UPSERT_ENABLED and AUTH_ENABLED
@@ -235,6 +235,7 @@ the JWT on every request.
 ## Related diagrams
 
 - [Authentication architecture](./auth-architecture.md)
+- [Browser login via gateway](./auth-browser-gateway-flow.md)
 - [Authenticated request flow](./auth-request-flow.md)
 - [JIT user upsert](./auth-jit-upsert.md)
 - [Shadow users schema](./auth-users-schema.md)

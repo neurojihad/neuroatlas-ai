@@ -29,3 +29,9 @@ erDiagram
 Migration: `src/housekeeper/migrations/versions/0002_users.py`
 
 Apply with: `make migrate`
+
+## Related diagrams
+
+- [Browser login via gateway](./auth-browser-gateway-flow.md)
+- [JIT user upsert](./auth-jit-upsert.md)
+- [Authentication architecture](./auth-architecture.md)
