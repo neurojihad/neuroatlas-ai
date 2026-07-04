@@ -38,9 +38,9 @@ class AdminUiSettings(Settings):
     def __post_init__(self) -> None:
         if not self.service_map:
             self.service_map = {
-                "/api/v1/patients": self.patients_route,
-                "/api/v1/ml": self.ml_route,
-                "/api/v1/housekeeper": self.housekeeper_route,
+                "/guard/api/v1/patients": self.patients_route,
+                "/guard/api/v1/ml": self.ml_route,
+                "/guard/api/v1/housekeeper": self.housekeeper_route,
             }
 
 

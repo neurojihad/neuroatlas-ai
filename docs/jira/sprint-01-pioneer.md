@@ -112,11 +112,15 @@ Verify sprint membership:
 - [ ] `make run_gateway` / compose target; `/health` returns ok
 - [ ] Reuses `common.application.app_factory.create`
 
-### NLS-52 / NLS-GW-03 — Keycloak browser client
-- [ ] New client `neuroatlas-ui` (public or confidential per UI choice)
-- [ ] Redirect URIs: `http://localhost:8000/auth/callback`, frontend dev URL
-- [ ] Web origins / CORS for UI + gateway
-- [ ] Standard flow ON; direct access grants OFF in prod
+### NLS-62 / NLS-ADMIN-02 — Keycloak browser client (admin_ui)
+- [x] Client `neuroatlas-ui` in `infra/keycloak/import/neuroatlas-realm.json`
+- [x] Public client with PKCE (S256); standard flow ON; direct access grants OFF
+- [x] Redirect URIs: `http://localhost:8000/api/v1/token`, `http://127.0.0.1:8000/api/v1/token`, `http://localhost:3000/*`
+- [x] Web origins for admin_ui (:8000) and React dev (:3000)
+- [x] Audience mapper: access token `aud` includes `neuroatlas-api`
+
+### NLS-52 / NLS-GW-03 — Keycloak browser client (superseded by NLS-ADMIN-02)
+- [x] Superseded — see NLS-62 / NLS-ADMIN-02 above
 
 ### NLS-51 / NLS-GW-02 — Reverse proxy
 - [ ] Route map: `/api/v1/patients*` → patients:8001, ml/housekeeper as needed

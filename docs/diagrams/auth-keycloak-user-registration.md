@@ -66,10 +66,11 @@ creates:
 |----------|-------|
 | Realm | `neuroatlas` |
 | Realm roles | `admin`, `clinician`, `researcher` |
-| OIDC client | `neuroatlas-api` (confidential) |
+| OIDC client (API) | `neuroatlas-api` (confidential) |
+| OIDC client (browser) | `neuroatlas-ui` (public, PKCE) — redirect to `admin_ui` `/api/v1/token` |
 | Dev client secret | `dev-neuroatlas-api-secret` (set `KEYCLOAK_CLIENT_SECRET` in `infra/.env`) |
-| Audience mapper | access token `aud` includes `neuroatlas-api` |
-| Direct access grants | ON (password grant for local curl tests) |
+| Audience mapper | access token `aud` includes `neuroatlas-api` (both clients) |
+| Direct access grants | ON for `neuroatlas-api` only (password grant for local curl tests) |
 
 **You only need the manual steps below if** auto-import failed or you are on a remote Keycloak
 without this compose file.
@@ -120,6 +121,26 @@ access token includes that audience:
 3. **Included Client Audience:** `neuroatlas-api` → **Save**.
 
 Without this mapper, tokens may carry `aud: account` and the API will reject them.
+
+### 1.5 Browser client for admin_ui (auto-imported locally)
+
+The **`neuroatlas-ui`** public client supports the admin_ui BFF authorization-code flow with
+**PKCE** (NLS-ADMIN-02). Keycloak redirects back to admin_ui after login:
+
+| Setting | Value |
+|---------|-------|
+| Client ID | `neuroatlas-ui` (matches `KEYCLOAK_UI_CLIENT_ID` in `infra/.env`) |
+| Type | Public (no client secret) |
+| Standard flow | ON |
+| Direct access grants | OFF |
+| PKCE | S256 (required) |
+| Redirect URIs | `http://localhost:8000/api/v1/token`, `http://127.0.0.1:8000/api/v1/token`, `http://localhost:3000/*` |
+| Web origins | `http://localhost:8000`, `http://127.0.0.1:8000`, `http://localhost:3000` |
+| Audience mapper | access token `aud` includes `neuroatlas-api` |
+
+Manual fallback: **Clients** → **Create client** → Client ID `neuroatlas-ui` → **Client
+authentication** OFF → enable **Standard flow** only → set redirect URIs and web origins as
+above → add the same **Audience** mapper (§1.4) on the client dedicated scope.
 
 ---
 
