@@ -11,9 +11,9 @@ project prefix. Link each ticket to [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 
 | Ticket | Title | Status | ARCHITECTURE.md ref |
 |--------|-------|--------|---------------------|
-| NLS-101 | API Gateway service (FastAPI entry point) | Open | §12, §5 Phase 2 |
-| NLS-102 | Gateway routing to patients / ml / housekeeper | Open | §4 Gateway |
-| NLS-103 | Centralize OIDC auth at gateway | Open | §5 Phase 2 |
+| NLS-101 | API Gateway service (FastAPI entry point) | Partial | §12, §5 Phase 2 — see NLS-GW-01 |
+| NLS-102 | Gateway routing to patients / ml / housekeeper | Open | §4 Gateway — see NLS-GW-02 |
+| NLS-103 | Centralize OIDC auth at gateway | Open | §5 Phase 2 — see NLS-GW-04..05 |
 | NLS-104 | Rate limiting at gateway (Redis-backed) | Open | §4 Gateway, §6 Redis |
 | NLS-105 | Per-service Docker deploy targets in CI | Open | §12 |
 | NLS-106 | Database-per-service strategy (design + ADR) | Open | §12 |
@@ -35,8 +35,8 @@ project prefix. Link each ticket to [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 
 | Ticket | Title | Status | ARCHITECTURE.md ref |
 |--------|-------|--------|---------------------|
-| NLS-301 | Keycloak realm bootstrap (`neuroatlas`, roles, client) | Open | §5, §6 Keycloak |
-| NLS-302 | Shadow `users` table JIT upsert in production path | Partial | §5, `docs/diagrams/` |
+| NLS-301 | Keycloak realm bootstrap (`neuroatlas`, roles, client) | Partial | §5, §6 Keycloak — compose import + volume; manual user still required |
+| NLS-302 | Shadow `users` table JIT upsert in production path | Partial | §5, `docs/diagrams/` — wired; needs API call with Bearer |
 | NLS-303 | Audit events table + correlation with `user_id` | Open | §5 |
 | NLS-304 | Service accounts (client credentials) for ML | Open | §5 Phase 3 |
 
@@ -93,8 +93,31 @@ project prefix. Link each ticket to [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 | Ticket | Title | Status | ARCHITECTURE.md ref |
 |--------|-------|--------|---------------------|
 | NLS-801 | Next.js app scaffold | Open | §10 Phase 5 |
-| NLS-802 | Keycloak login flow in UI | Open | §5 |
-| NLS-803 | Gateway integration from UI | Open | §10 Phase 5 |
+| NLS-802 | Keycloak login flow in UI | Open | §5 — see NLS-GW-07 (OIDC redirect + PKCE) |
+| NLS-803 | Gateway integration from UI | Open | §10 Phase 5 — see NLS-GW-08 |
+
+---
+
+## Gateway + browser OIDC (Pioneer extension)
+
+Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT directly** at the API edge (no AtomID exchange). Browser flow: **authorization code + PKCE** → gateway BFF holds refresh → forwards **Bearer** to backends.
+
+| Ref | Jira | Epic | Title | Status |
+|-----|------|------|-------|--------|
+| NLS-GW-01 | NLS-50 | EPIC-01 | Gateway service scaffold (`src/gateway/`, hex layout) | Open |
+| NLS-GW-02 | NLS-51 | EPIC-01 | Reverse proxy to patients / ml / housekeeper | Open |
+| NLS-GW-03 | NLS-52 | EPIC-03 | Keycloak **browser** client (`neuroatlas-ui`, redirect URIs, CORS) | Open |
+| NLS-GW-04 | NLS-53 | EPIC-01 | Gateway OIDC routes: `/auth/login`, `/auth/callback`, `/auth/logout` | Open |
+| NLS-GW-05 | NLS-54 | EPIC-01 | Session: httpOnly refresh cookie + in-memory access + Bearer forward | Open |
+| NLS-GW-06 | NLS-55 | EPIC-02 | E2E smoke: browser login → gateway → patients `/api/v1/patients` + JIT row | Open |
+| NLS-GW-07 | NLS-56 | EPIC-08 | Frontend Keycloak browser login (redirect / PKCE or gateway session) | Open |
+| NLS-GW-08 | NLS-57 | EPIC-08 | Frontend calls API only via gateway base URL | Open |
+| NLS-GW-09 | NLS-58 | EPIC-01 | `application.compose.yml`: gateway on stack (port 8000) | Open |
+| NLS-GW-10 | NLS-59 | EPIC-03 | Doc: `auth-browser-gateway-flow.md` sequence diagram | Open |
+
+**Overlap:** NLS-101..103 and NLS-802..803 remain umbrella stories; close or link when NLS-GW-* are Done.
+
+**Out of Pioneer:** NLS-104 (Redis rate limit), full auth removal from service handlers (optional follow-up).
 
 ---
 
@@ -103,15 +126,31 @@ project prefix. Link each ticket to [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 ### Milestone M1 — Runnable clinical API
 - NLS-201, NLS-202, NLS-301, NLS-302
 
-### Milestone M2 — Gateway + auth consolidation
-- NLS-101, NLS-102, NLS-103
+### Milestone M2 — Gateway + browser auth (Pioneer extension)
+- NLS-GW-01 → NLS-GW-02 → NLS-GW-03 → NLS-GW-04 → NLS-GW-05 → NLS-GW-06
+- Parallel when gateway auth routes exist: NLS-GW-07, NLS-GW-08
+- NLS-GW-09, NLS-GW-10 alongside infra work
 
 ### Milestone M3 — Event-driven ML path
 - NLS-401, NLS-601, NLS-403
 
 ---
 
+## Active sprint
+
+**Sprint 01 — Pioneer** (M1 + gateway/browser auth extension, Jira sprint id 35): see [`sprint-01-pioneer.md`](sprint-01-pioneer.md)
+
+**Sprint goal:** Postgres-backed patients API with Keycloak auth, JIT user upsert, and **browser login through gateway** proxying Keycloak JWT to backend services.
+
+Full backlog keys: [`backlog-keys.md`](backlog-keys.md) (45 stories + 8 epics incl. NLS-GW-01..10).
+
+---
+
 ## How to use in Jira
+
+See [`docs/jira/README.md`](README.md) for API setup, CLI commands, and the **`scrum_master`** Cursor agent.
+
+Jira key mapping (plan ref to Jira key): [`backlog-keys.md`](backlog-keys.md).
 
 1. Create project **NeuroAtlas** (or your prefix).
 2. Create epics `NLS-EPIC-01` … `NLS-EPIC-08`.
