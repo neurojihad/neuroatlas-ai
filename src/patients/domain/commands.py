@@ -29,7 +29,7 @@ class RegisterPatient(Command):
         diagnosis_code: str | None = None
         user_id: str | None = None
 
-        def validate(self) -> None:
+        def validate_context(self) -> None:
             """Validate the registration payload."""
             current_year = datetime.datetime.now(datetime.UTC).year
             if not (current_year - 25 <= self.date_of_birth_year <= current_year):
@@ -38,17 +38,21 @@ class RegisterPatient(Command):
                     field_name="date_of_birth_year",
                 )
 
-    async def _execute(self, ctx: Context) -> CommandResult[str]:
+    def __init__(self, uow: PatientsUnitOfWork, ctx: "RegisterPatient.Context") -> None:
+        super().__init__(uow, ctx)
+        self.ctx: RegisterPatient.Context
+
+    async def execute(self) -> CommandResult[str]:
         """Persist the patient and return its surrogate id."""
         patient = Patient(
             id=f"pat_{str(ULID()).lower()}",
-            date_of_birth_year=ctx.date_of_birth_year,
-            sex=ctx.sex,
-            diagnosis_code=ctx.diagnosis_code,
+            date_of_birth_year=self.ctx.date_of_birth_year,
+            sex=self.ctx.sex,
+            diagnosis_code=self.ctx.diagnosis_code,
         )
         async with self.uow:
             await self.uow.patients.create(patient)
-        await logger.ainfo("Patient registered.", patient_id=patient.id, user_id=ctx.user_id)
+        await logger.ainfo("Patient registered.", patient_id=patient.id, user_id=self.ctx.user_id)
         return CommandResult(data=patient.id)
 
 
