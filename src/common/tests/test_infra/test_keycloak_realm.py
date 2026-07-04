@@ -1,12 +1,13 @@
 """Validate Keycloak realm import includes neuroatlas-ui browser client (NLS-ADMIN-02)."""
 
 import json
-from pathlib import Path
 from typing import Any, cast
 
 import pytest
 
-REALM_PATH = Path(__file__).resolve().parents[4] / "infra" / "keycloak" / "import" / "neuroatlas-realm.json"
+from common.tests.paths import repo_root
+
+REALM_PATH = repo_root() / "infra" / "keycloak" / "import" / "neuroatlas-realm.json"
 
 
 @pytest.fixture(scope="module")

@@ -1,5 +1,9 @@
 # Browser Login via Gateway (Target Flow)
 
+> **Superseded for browser (Pioneer):** clinicians use **`admin_ui`** on port 8000 — see
+> [Admin UI browser login flow](./auth-admin-ui-browser-flow.md). This document remains for the
+> legacy gateway BFF design and post-Pioneer headless **gateway** planning.
+
 NeuroAtlas **Pioneer / M2** auth path: the browser never holds a long-lived access token in
 JavaScript. The **Gateway BFF** runs the OIDC authorization-code flow with **PKCE**, stores the
 refresh token in an **httpOnly cookie**, and forwards the **same Keycloak access JWT** to backend

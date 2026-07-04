@@ -106,7 +106,7 @@ Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT dire
 |-----|------|------|-------|--------|
 | NLS-GW-01 | NLS-50 | EPIC-01 | Gateway service scaffold (`src/gateway/`, hex layout) | Open |
 | NLS-GW-02 | NLS-51 | EPIC-01 | Reverse proxy to patients / ml / housekeeper | Open |
-| NLS-GW-03 | NLS-52 | EPIC-03 | Keycloak **browser** client (`neuroatlas-ui`, redirect URIs, CORS) | Open |
+| NLS-GW-03 | NLS-52 | EPIC-03 | Keycloak **browser** client (`neuroatlas-ui`, redirect URIs, CORS) | Done (superseded by NLS-ADMIN-02) |
 | NLS-GW-04 | NLS-53 | EPIC-01 | Gateway OIDC routes: `/auth/login`, `/auth/callback`, `/auth/logout` | Open |
 | NLS-GW-05 | NLS-54 | EPIC-01 | Session: httpOnly refresh cookie + in-memory access + Bearer forward | Open |
 | NLS-GW-06 | NLS-55 | EPIC-02 | E2E smoke: browser login → gateway → patients `/api/v1/patients` + JIT row | Open |
