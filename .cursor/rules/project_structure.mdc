@@ -34,6 +34,7 @@ there is no longer a `neuroatlas-ai/` subdirectory).
     │   └── http/            # error_handlers, ResponseSchema/ListResponseSchema
     ├── patients/           # clinical-data service (FastAPI, port 8001)
     ├── ml/                 # prediction service (FastAPI, port 8002; Kafka consumer)
+    ├── admin_ui/           # admin BFF + React (FastAPI, port 8000)
     └── housekeeper/        # migrations & DB ops (FastAPI, port 8003)
 ```
 

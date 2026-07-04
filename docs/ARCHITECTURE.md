@@ -127,19 +127,47 @@ The platform must:
 
 ### Gateway Service
 
+Headless **API Gateway** for all non-browser clients (mobile, partners, scripts). Single
+HTTPS entry: JWT validation, routing, rate limiting, audit. **Planned** post-Pioneer (NLS-50..51).
+
+See [auth-api-gateway-flow.md](diagrams/auth-api-gateway-flow.md) and [edge-architecture.md](diagrams/edge-architecture.md).
+
 Responsibilities:
 
-* REST API
-* Authentication (see [docs/diagrams/auth-architecture.md](diagrams/auth-architecture.md))
+* REST API routing to internal services
+* Authentication at the edge (Keycloak JWT)
 * Authorization
 * Validation
 * Audit Logging
 * Rate Limiting
-* Publishing Kafka Events
+* Publishing Kafka Events (future)
 
 Technology:
 
 * FastAPI
+
+---
+
+### Admin UI Service
+
+**Browser BFF** for clinicians: embedded React SPA, Keycloak OIDC login, session cookies,
+guard proxy to backends. **Pioneer** entry point on port **8000** (NLS-61..69).
+
+See [auth-admin-ui-browser-flow.md](diagrams/auth-admin-ui-browser-flow.md).
+
+Responsibilities:
+
+* OIDC authorization-code flow (login, callback, refresh, logout)
+* Session cookies (split JWT pattern, planned)
+* Serve React admin panel (`/patients`, etc.)
+* Reverse proxy `/guard/api/v1/*` → patients / ml / housekeeper
+* Forward `Authorization: Bearer` Keycloak JWT to backends
+
+Technology:
+
+* FastAPI + React (Vite)
+
+**Target layout:** `src/admin_ui/` — see [edge-architecture.md](diagrams/edge-architecture.md).
 
 ---
 
@@ -291,8 +319,11 @@ Detailed diagrams live under [`docs/diagrams/`](diagrams/):
 
 | Diagram | Description |
 |---------|-------------|
-| [auth-architecture.md](diagrams/auth-architecture.md) | Components, gateway + backend layout |
-| [auth-browser-gateway-flow.md](diagrams/auth-browser-gateway-flow.md) | Browser OIDC: UI token exchange + gateway edge validation; unified BFF variant |
+| [edge-architecture.md](diagrams/edge-architecture.md) | **admin_ui vs gateway**, target module layout, decisions |
+| [auth-architecture.md](diagrams/auth-architecture.md) | Components, edge + backend layout |
+| [auth-admin-ui-browser-flow.md](diagrams/auth-admin-ui-browser-flow.md) | Clinician browser login via **admin_ui** (Pioneer) |
+| [auth-api-gateway-flow.md](diagrams/auth-api-gateway-flow.md) | Mobile / partner API via **gateway** (planned) |
+| [auth-browser-gateway-flow.md](diagrams/auth-browser-gateway-flow.md) | Legacy unified BFF notes (superseded for browser by admin_ui) |
 | [auth-keycloak-user-registration.md](diagrams/auth-keycloak-user-registration.md) | Admin provisions users in Keycloak (full sequence) |
 | [auth-request-flow.md](diagrams/auth-request-flow.md) | Backend JWT validation (direct or gateway-forwarded) |
 | [auth-users-schema.md](diagrams/auth-users-schema.md) | Shadow `users` table |
@@ -312,9 +343,10 @@ Detailed diagrams live under [`docs/diagrams/`](diagrams/):
 ### Implementation phases
 
 1. **Phase 1 (current):** JWT validation, role checks, patients handler wiring, JIT upsert, audit logs
-2. **Phase 2 (Pioneer / M2):** Gateway BFF — browser OIDC (PKCE), httpOnly refresh cookie, reverse proxy with Keycloak JWT forward ([auth-browser-gateway-flow.md](diagrams/auth-browser-gateway-flow.md))
-3. **Phase 3:** Service accounts (client credentials) for ML / batch jobs
-4. **Phase 4:** Fine-grained resource policies (patient-level ACL)
+2. **Phase 2 (Pioneer / M2):** **admin_ui** BFF — browser OIDC, session cookies, React UI, guard proxy with Keycloak JWT forward ([auth-admin-ui-browser-flow.md](diagrams/auth-admin-ui-browser-flow.md))
+3. **Phase 2.5 (post-Pioneer):** Headless **gateway** for all API clients ([auth-api-gateway-flow.md](diagrams/auth-api-gateway-flow.md))
+4. **Phase 3:** Service accounts (client credentials) for ML / batch jobs
+5. **Phase 4:** Fine-grained resource policies (patient-level ACL)
 
 ---
 
@@ -640,9 +672,9 @@ Related patterns: [API Gateway](https://microservices.io/patterns/apigateway.htm
 ```text
 microservices.io target              NeuroAtlas today (Jul 2026)
 ─────────────────────────            ─────────────────────────────
-        UI                                    UI (planned)
+        UI                                    admin_ui scaffold (NLS-61)
          │                                       │
-    API Gateway                              (missing)
+    API Gateway                              (planned)
          │                                       │
     ┌────┴────┬────────┐                   patients:8001  ml:8002  housekeeper:8003
     │         │        │                        │            │            │
@@ -659,7 +691,8 @@ microservices.io target              NeuroAtlas today (Jul 2026)
 | **Patients service** | Own subdomain + deployable unit | **Partial** | FastAPI + Docker; persistence still in-memory |
 | **ML service** | Own subdomain + deployable unit | **Partial** | Deployable; Kafka consumer when `KAFKA_ENABLED=true` |
 | **Housekeeper service** | Schema/migration authority | **Partial** | Alembic + DB health; owns all migrations centrally |
-| **API Gateway** | Client entry point | **Planned** | Documented in §3; auth Phase 2 in §5 |
+| **Admin UI service** | Browser BFF + React | **Partial** | Scaffold `src/admin_ui/` (NLS-61); auth/proxy in NLS-63..67 |
+| **API Gateway** | Client entry point (all API clients) | **Planned** | Headless; post-Pioneer (NLS-50..51) |
 | **Ingestion service** | PubMed / article import | **Planned** | §4 only |
 | **Embedding service** | Vector generation | **Planned** | §4 only |
 | **Search service** | Semantic retrieval | **Planned** | §4 only |
