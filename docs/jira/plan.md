@@ -124,7 +124,7 @@ Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT dire
 | Ref | Jira | Epic | Title | Status |
 |-----|------|------|-------|--------|
 | NLS-ADMIN-01 | NLS-61 | EPIC-01 | `admin_ui` service scaffold (`src/admin_ui/`) | Partial |
-| NLS-ADMIN-02 | NLS-62 | EPIC-03 | Keycloak `neuroatlas-ui` client (admin_ui callback) | Open |
+| NLS-ADMIN-02 | NLS-62 | EPIC-03 | Keycloak `neuroatlas-ui` client (admin_ui callback) | Done |
 | NLS-ADMIN-03 | NLS-63 | EPIC-01 | OIDC auth handlers (token, refresh, logout, `/auth/me`) | Open |
 | NLS-ADMIN-04 | NLS-64 | EPIC-01 | Guard proxy `/guard/api/v1/*` → patients / ml | Open |
 | NLS-ADMIN-05 | NLS-65 | EPIC-08 | React admin UI (auth pages + patients MVP) | Open |

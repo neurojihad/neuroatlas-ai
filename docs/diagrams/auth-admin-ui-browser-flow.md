@@ -3,7 +3,10 @@
 Clinician login through **`admin_ui`** (port 8000): Keycloak OIDC, session cookies, guard proxy
 to `patients`. No AtomID token exchange — the same Keycloak JWT is forwarded to backends.
 
-**Jira:** NLS-ADMIN-03..08 (NLS-63..68) · **Scaffold:** NLS-ADMIN-01 (NLS-61)
+**Jira:** NLS-ADMIN-02 (NLS-62) · NLS-ADMIN-03..08 (NLS-63..68) · **Scaffold:** NLS-ADMIN-01 (NLS-61)
+
+Keycloak client **`neuroatlas-ui`** (public, PKCE) redirects to `http://localhost:8000/api/v1/token`
+after login — configured in `infra/keycloak/import/neuroatlas-realm.json`.
 
 See also [edge architecture](./edge-architecture.md) for module layout and decisions.
 
