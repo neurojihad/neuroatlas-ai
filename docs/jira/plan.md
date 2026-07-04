@@ -111,7 +111,19 @@ project prefix. Link each ticket to [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 
 ---
 
+## Active sprint
+
+**Sprint 01 — Pioneer** (M1, Jira sprint id 35): see [`sprint-01-pioneer.md`](sprint-01-pioneer.md)
+
+Full backlog keys: [`backlog-keys.md`](backlog-keys.md) (35 stories + 8 epics).
+
+---
+
 ## How to use in Jira
+
+See [`docs/jira/README.md`](README.md) for API setup, CLI commands, and the **`scrum_master`** Cursor agent.
+
+Jira key mapping (plan ref to Jira key): [`backlog-keys.md`](backlog-keys.md).
 
 1. Create project **NeuroAtlas** (or your prefix).
 2. Create epics `NLS-EPIC-01` … `NLS-EPIC-08`.
