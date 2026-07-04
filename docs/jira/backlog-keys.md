@@ -69,3 +69,17 @@ Project key: **NLS**. Plan refs (NLS-*) map to auto-assigned Jira keys.
 | NLS-GW-08 | NLS-57 | NLS-13 | Frontend API integration through gateway entry point |
 | NLS-GW-09 | NLS-58 | NLS-6 | Docker compose: gateway service on application stack |
 | NLS-GW-10 | NLS-59 | NLS-8 | Auth diagram: gateway + browser OIDC flow |
+
+## admin_ui BFF + React panel (Pioneer - supersedes gateway-only browser path)
+
+| plan ref | Jira | Epic | Title |
+|----------|------|------|-------|
+| NLS-ADMIN-01 | NLS-61 | NLS-6 | admin_ui service scaffold (src/admin_ui/, hex layout) |
+| NLS-ADMIN-02 | NLS-62 | NLS-8 | Keycloak browser client neuroatlas-ui (redirect URIs, admin_ui callback) |
+| NLS-ADMIN-03 | NLS-63 | NLS-6 | admin_ui OIDC auth handlers (login, token, refresh, logout, /auth/me) |
+| NLS-ADMIN-04 | NLS-64 | NLS-6 | admin_ui guard proxy to patients and ml (/guard/api/v1/*) |
+| NLS-ADMIN-05 | NLS-65 | NLS-13 | React admin UI: auth pages, AuthProvider, patients MVP |
+| NLS-ADMIN-06 | NLS-66 | NLS-6 | admin_ui static SPA serving (frontend router + window._env_) |
+| NLS-ADMIN-07 | NLS-67 | NLS-6 | Docker compose: admin_ui on port 8000 (browser entry) |
+| NLS-ADMIN-08 | NLS-68 | NLS-7 | E2E smoke: browser login via admin_ui to patients API + JIT user row |
+| NLS-ADMIN-09 | NLS-69 | NLS-8 | Auth diagram: admin_ui BFF + browser OIDC flow |
