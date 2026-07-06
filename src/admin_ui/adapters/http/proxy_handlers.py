@@ -10,6 +10,7 @@ from admin_ui.adapters.http import dependencies
 from admin_ui.adapters.http.proxy import resolve_upstream_url
 from admin_ui.settings import AdminUiSettings
 from common.application.logging import logger
+from common.http.schemas import ErrorSchema
 from common.utils.identifiers import generate_id_for
 
 router_guard = APIRouter(tags=["guard-proxy"])
@@ -83,7 +84,7 @@ async def guard_proxy(request: Request, full_path: str) -> StarletteResponse:
         )
         return StarletteResponse(
             status_code=502,
-            content='{"message":"Upstream service unavailable."}',
+            content=ErrorSchema(message="Upstream service unavailable.").model_dump_json(),
             media_type="application/json",
         )
 

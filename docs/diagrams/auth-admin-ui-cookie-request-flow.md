@@ -55,7 +55,9 @@ flowchart LR
 **Why split?** PaymentGate-style UX: the SPA can read claims from the payload cookie (e.g.
 `realm_access.roles`) without holding a forgeable full JWT. The signature stays httpOnly.
 
-**Flags:** `Path=/`, `SameSite=Lax`, `Secure` when `ENVIRONMENT != local`.
+**Flags:** `Path=/`, `SameSite=Lax`, `Secure` when `ENVIRONMENT != local`. Logout clears cookies with the same attributes.
+
+**Post-login redirect:** `?redirect=` on `GET /api/v1/auth` must be a relative path (`/patients`). External URLs are rejected (`sanitize_redirect_path` → `/`).
 
 ---
 
@@ -124,9 +126,9 @@ sequenceDiagram
 
     B->>UI: GET /guard/api/v1/patients (cookies only)
     UI->>UI: join_jwt from session cookies
-  alt access token valid
+    alt access token valid
         UI->>UI: KeycloakAuthAdapter.get_user(token)
-    else access expired + refresh cookie present
+    else access expired (exp claim) + refresh cookie present
         UI->>KC: POST /token (grant_type=refresh_token)
         KC-->>UI: new access (+ optional refresh)
         UI->>UI: set_auth_cookies on response

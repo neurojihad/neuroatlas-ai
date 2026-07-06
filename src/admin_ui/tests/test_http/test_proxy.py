@@ -2,8 +2,8 @@
 
 import pytest
 
-from admin_ui.settings import AdminUiSettings
 from admin_ui.adapters.http.proxy import backend_path, resolve_upstream_url
+from admin_ui.settings import AdminUiSettings
 from common.core.exceptions import NotFound
 
 

@@ -2,7 +2,15 @@
 
 import pytest
 
-from admin_ui.auth.session import PkceStore, build_authorize_url, join_jwt, split_jwt
+from admin_ui.auth.session import (
+    PkceStore,
+    build_authorize_url,
+    is_access_token_expired,
+    join_jwt,
+    sanitize_redirect_path,
+    split_jwt,
+)
+from admin_ui.tests.fakes import DEFAULT_ACCESS_TOKEN, expired_access_token
 
 
 def test_split_and_join_jwt_roundtrip():
@@ -42,3 +50,21 @@ def test_build_authorize_url_includes_pkce_params():
     assert "code_challenge=test-challenge" in url
     assert "code_challenge_method=S256" in url
     assert "state=test-state" in url
+
+
+def test_sanitize_redirect_path_allows_relative_paths():
+    assert sanitize_redirect_path("/patients") == "/patients"
+    assert sanitize_redirect_path("/") == "/"
+
+
+@pytest.mark.parametrize(
+    "unsafe",
+    ["https://evil.com", "//evil.com/path", "http://evil.com", "javascript:alert(1)"],
+)
+def test_sanitize_redirect_path_blocks_open_redirects(unsafe: str):
+    assert sanitize_redirect_path(unsafe) == "/"
+
+
+def test_is_access_token_expired_detects_exp_claim():
+    assert is_access_token_expired(expired_access_token()) is True
+    assert is_access_token_expired(DEFAULT_ACCESS_TOKEN) is False

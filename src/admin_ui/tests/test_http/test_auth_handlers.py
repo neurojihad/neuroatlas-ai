@@ -6,8 +6,9 @@ from httpx import ASGITransport, AsyncClient
 from admin_ui.auth.session import PkceStore, split_jwt
 from admin_ui.main import app
 from admin_ui.settings import settings
-from admin_ui.tests.fakes import DEFAULT_ACCESS_TOKEN, FakeOidcClient
+from admin_ui.tests.fakes import DEFAULT_ACCESS_TOKEN, ExpiringAuthManager, FakeOidcClient, expired_access_token
 from common.adapters.auth.keycloak import NullAuthAdapter
+from common.core.entities.user import UserInfo
 
 _FAKE_ACCESS = DEFAULT_ACCESS_TOKEN
 _PAYLOAD_PART, _SIGNATURE_PART = split_jwt(_FAKE_ACCESS)
@@ -85,6 +86,56 @@ async def test_token_callback_exchanges_code_and_sets_cookies():
         assert settings.refresh_token_alias in response.cookies
         assert len(oidc.exchange_calls) == 1
         assert oidc.exchange_calls[0]["code"] == "auth-code"
+
+
+@pytest.mark.asyncio
+async def test_token_callback_blocks_external_redirect():
+    oidc = FakeOidcClient(
+        tokens={"access_token": _FAKE_ACCESS, "refresh_token": "refresh-token-value"},
+    )
+
+    async with app.router.lifespan_context(app):
+        pkce = PkceStore()
+        challenge = pkce.create(redirect_after_login="https://evil.com")
+        app.state.pkce_store = pkce
+        app.state.oidc_client = oidc
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
+            response = await client.get(
+                "/api/v1/token",
+                params={"code": "auth-code", "state": challenge.state},
+            )
+
+        assert response.status_code == 302
+        assert response.headers["location"] == "/"
+
+
+@pytest.mark.asyncio
+async def test_auth_me_refreshes_expired_session():
+    expired_token = expired_access_token()
+    payload_part, signature_part = split_jwt(expired_token)
+    oidc = FakeOidcClient(tokens={"access_token": _FAKE_ACCESS, "refresh_token": "new-refresh"})
+    refreshed_user = UserInfo(user_id="usr_refreshed", email="user@test.com", roles=["clinician"])
+
+    async with app.router.lifespan_context(app):
+        app.state.oidc_client = oidc
+        app.state.auth_manager = ExpiringAuthManager(user=refreshed_user)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(
+                "/api/v1/auth/me",
+                cookies={
+                    settings.access_token_alias: payload_part,
+                    settings.signature_token_alias: signature_part,
+                    settings.refresh_token_alias: "old-refresh",
+                },
+            )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["user_id"] == "usr_refreshed"
+    assert oidc.refresh_calls == ["old-refresh"]
+    assert settings.access_token_alias in response.cookies
 
 
 @pytest.mark.asyncio

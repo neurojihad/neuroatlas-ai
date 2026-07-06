@@ -84,7 +84,7 @@ src/admin_ui/
 | API entry for all clients | **gateway** (later) | microservices.io single HTTPS entry; mobile/partners never hit admin_ui |
 | Token at backend | **Keycloak JWT** (no AtomID) | Simpler than PaymentGate; same token from login to patients |
 | Pioneer proxy path | admin_ui → **patients direct** | Faster MVP; optional admin_ui → gateway → patients later |
-| Session cookies | Split JWT cookies (planned) | Match PaymentGate UX; access payload readable, signature httponly |
+| Session cookies | Split JWT cookies | Match PaymentGate UX; access payload readable, signature httponly |
 | UI permissions | JWT `realm_access.roles` | No Spravochneek; menu filtered by clinician/admin/researcher |
 
 ## Related diagrams

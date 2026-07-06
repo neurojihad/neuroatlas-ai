@@ -7,11 +7,18 @@ from typing import Any
 
 import httpx
 
+import jwt
+
 from common.core.entities.user import UserInfo
 from common.core.exceptions import AuthException
 from common.core.ports.auth import AuthAdapter
 
 DEFAULT_ACCESS_TOKEN = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.fake-signature"
+
+
+def expired_access_token() -> str:
+    """JWT with exp in the past (for refresh-path tests)."""
+    return jwt.encode({"sub": "test", "exp": 1}, "secret", algorithm="HS256")
 
 
 @dataclass

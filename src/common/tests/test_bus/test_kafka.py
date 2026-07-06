@@ -85,7 +85,9 @@ class _StubKafkaConsumer:
     async def seek_to_committed(self) -> None:
         return None
 
-    async def getmany(self, timeout_ms: int = 100, max_records: int = 100) -> dict[TopicPartition, list[_StubKafkaMessage]]:
+    async def getmany(
+        self, timeout_ms: int = 100, max_records: int = 100
+    ) -> dict[TopicPartition, list[_StubKafkaMessage]]:
         return self.messages
 
     async def commit(self, offsets: dict[TopicPartition, int]) -> None:

@@ -12,6 +12,7 @@ from admin_ui.tests.fakes import (
     FakeAuthManager,
     FakeHttpClient,
     FakeOidcClient,
+    expired_access_token,
 )
 from common.core.entities.user import UserInfo
 
@@ -71,7 +72,14 @@ async def test_guard_proxy_returns_404_for_unknown_route(auth_cookies: dict[str,
 
 
 @pytest.mark.asyncio
-async def test_guard_proxy_refreshes_expired_session(auth_cookies: dict[str, str]):
+async def test_guard_proxy_refreshes_expired_session():
+    expired_token = expired_access_token()
+    payload_part, signature_part = split_jwt(expired_token)
+    expired_cookies = {
+        settings.access_token_alias: payload_part,
+        settings.signature_token_alias: signature_part,
+        settings.refresh_token_alias: "old-refresh",
+    }
     refreshed_user = UserInfo(user_id="usr_refreshed", email="user@test.com", roles=["clinician"])
     oidc = FakeOidcClient(tokens={"access_token": _FAKE_ACCESS, "refresh_token": "new-refresh"})
     http_client = FakeHttpClient()
@@ -82,16 +90,35 @@ async def test_guard_proxy_refreshes_expired_session(auth_cookies: dict[str, str
         app.state.http_client = http_client
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get(
-                "/guard/api/v1/patients",
-                cookies={**auth_cookies, settings.refresh_token_alias: "old-refresh"},
-            )
+            response = await client.get("/guard/api/v1/patients", cookies=expired_cookies)
 
     assert response.status_code == 200
     assert oidc.refresh_calls == ["old-refresh"]
     assert settings.access_token_alias in response.cookies
     assert http_client.last_request is not None
     assert http_client.last_request["headers"]["X-User-Id"] == "usr_refreshed"
+
+
+@pytest.mark.asyncio
+async def test_guard_proxy_does_not_refresh_invalid_token(auth_cookies: dict[str, str]):
+    oidc = FakeOidcClient()
+    http_client = FakeHttpClient()
+
+    async with app.router.lifespan_context(app):
+        app.state.auth_manager = ExpiringAuthManager(
+            user=UserInfo(user_id="usr_x", email="x@test.com", roles=["clinician"]),
+        )
+        app.state.oidc_client = oidc
+        app.state.http_client = http_client
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(
+                "/guard/api/v1/patients",
+                cookies={**auth_cookies, settings.refresh_token_alias: "old-refresh"},
+            )
+
+    assert response.status_code == 401
+    assert oidc.refresh_calls == []
 
 
 @pytest.mark.asyncio

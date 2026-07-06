@@ -9,6 +9,9 @@ import time
 from dataclasses import dataclass
 from urllib.parse import urlencode
 
+import jwt
+from jwt.exceptions import ExpiredSignatureError, PyJWTError
+
 _PKCE_TTL_SEC = 600
 
 
@@ -106,3 +109,29 @@ def build_authorize_url(
     }
     base = f"{keycloak_base.rstrip('/')}/realms/{realm}/protocol/openid-connect/auth"
     return f"{base}?{urlencode(params)}"
+
+
+def sanitize_redirect_path(path: str) -> str:
+    """Allow only same-origin relative paths (blocks open redirects)."""
+    if not path.startswith("/") or path.startswith("//") or "://" in path:
+        return "/"
+    return path
+
+
+def is_access_token_expired(token: str) -> bool:
+    """Return True when the JWT exp claim is in the past (signature not verified)."""
+    try:
+        jwt.decode(
+            token,
+            options={
+                "verify_signature": False,
+                "verify_aud": False,
+                "verify_iss": False,
+                "verify_exp": True,
+            },
+        )
+        return False
+    except ExpiredSignatureError:
+        return True
+    except PyJWTError:
+        return False
