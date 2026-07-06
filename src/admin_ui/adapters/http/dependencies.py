@@ -4,11 +4,12 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
+from admin_ui.auth.keycloak import KeycloakOidcClient
 from admin_ui.auth.queries import get_user_from_access_token
 from admin_ui.auth.session import join_jwt, split_jwt
 from admin_ui.settings import AdminUiSettings
 from common.core.entities.user import UserInfo
-from common.core.exceptions import Unauthorized
+from common.core.exceptions import AuthException, Unauthorized
 from common.core.ports.auth import AuthAdapter
 
 
@@ -87,3 +88,28 @@ async def get_session_user(
 
 
 SessionUser = Annotated[UserInfo, Depends(get_session_user)]
+
+
+async def resolve_session_with_refresh(
+    request: Request,
+) -> tuple[str, UserInfo, dict[str, str] | None]:
+    """Return access token, user, and optional refreshed token payload for cookie updates."""
+    settings: AdminUiSettings = request.app.state.settings
+    auth_manager: AuthAdapter = request.app.state.auth_manager
+    oidc: KeycloakOidcClient = request.app.state.oidc_client
+
+    access_token = await get_session_access_token(request)
+    try:
+        user = await get_user_from_access_token(auth_manager, access_token)
+        return access_token, user, None
+    except AuthException:
+        refresh_token_value = request.cookies.get(settings.refresh_token_alias)
+        if not refresh_token_value:
+            raise Unauthorized("Session expired.") from None
+
+        tokens = await oidc.refresh(refresh_token_value)
+        access_token = str(tokens["access_token"])
+        new_refresh = tokens.get("refresh_token")
+        refresh_str = str(new_refresh) if new_refresh else refresh_token_value
+        user = await get_user_from_access_token(auth_manager, access_token)
+        return access_token, user, {"access_token": access_token, "refresh_token": refresh_str}

@@ -1,15 +1,15 @@
 """HTTP tests for admin_ui OIDC auth handlers."""
 
-from unittest.mock import AsyncMock, patch
-
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from admin_ui.auth.session import PkceStore, split_jwt
 from admin_ui.main import app
 from admin_ui.settings import settings
+from admin_ui.tests.fakes import DEFAULT_ACCESS_TOKEN, FakeOidcClient
+from common.adapters.auth.keycloak import NullAuthAdapter
 
-_FAKE_ACCESS = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.fake-signature"
+_FAKE_ACCESS = DEFAULT_ACCESS_TOKEN
 _PAYLOAD_PART, _SIGNATURE_PART = split_jwt(_FAKE_ACCESS)
 
 
@@ -47,11 +47,11 @@ async def test_auth_me_returns_401_without_cookies():
 
 @pytest.mark.asyncio
 async def test_auth_me_returns_user_with_session_cookies(auth_cookies: dict[str, str]):
-    with patch("admin_ui.settings.settings.auth_enabled", False):
-        async with app.router.lifespan_context(app):
-            transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
-                response = await client.get("/api/v1/auth/me", cookies=auth_cookies)
+    async with app.router.lifespan_context(app):
+        app.state.auth_manager = NullAuthAdapter()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/v1/auth/me", cookies=auth_cookies)
     assert response.status_code == 200
     data = response.json()["data"]
     assert data["user_id"] == "usr_dev_local"
@@ -61,17 +61,15 @@ async def test_auth_me_returns_user_with_session_cookies(auth_cookies: dict[str,
 
 @pytest.mark.asyncio
 async def test_token_callback_exchanges_code_and_sets_cookies():
+    oidc = FakeOidcClient(
+        tokens={"access_token": _FAKE_ACCESS, "refresh_token": "refresh-token-value"},
+    )
+
     async with app.router.lifespan_context(app):
         pkce = PkceStore()
         challenge = pkce.create(redirect_after_login="/patients")
         app.state.pkce_store = pkce
-        mock_exchange = AsyncMock(
-            return_value={
-                "access_token": _FAKE_ACCESS,
-                "refresh_token": "refresh-token-value",
-            },
-        )
-        app.state.oidc_client.exchange_code = mock_exchange
+        app.state.oidc_client = oidc
 
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
@@ -85,7 +83,8 @@ async def test_token_callback_exchanges_code_and_sets_cookies():
         assert settings.access_token_alias in response.cookies
         assert settings.signature_token_alias in response.cookies
         assert settings.refresh_token_alias in response.cookies
-        mock_exchange.assert_awaited_once()
+        assert len(oidc.exchange_calls) == 1
+        assert oidc.exchange_calls[0]["code"] == "auth-code"
 
 
 @pytest.mark.asyncio
@@ -102,15 +101,12 @@ async def test_token_callback_rejects_unknown_state():
 
 @pytest.mark.asyncio
 async def test_refresh_token_updates_cookies():
-    async with app.router.lifespan_context(app):
-        mock_refresh = AsyncMock(
-            return_value={
-                "access_token": _FAKE_ACCESS,
-                "refresh_token": "new-refresh",
-            },
-        )
-        app.state.oidc_client.refresh = mock_refresh
+    oidc = FakeOidcClient(
+        tokens={"access_token": _FAKE_ACCESS, "refresh_token": "new-refresh"},
+    )
 
+    async with app.router.lifespan_context(app):
+        app.state.oidc_client = oidc
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
@@ -120,7 +116,7 @@ async def test_refresh_token_updates_cookies():
 
         assert response.status_code == 200
         assert settings.access_token_alias in response.cookies
-        mock_refresh.assert_awaited_once_with("old-refresh")
+        assert oidc.refresh_calls == ["old-refresh"]
 
 
 @pytest.mark.asyncio

@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator
+from dataclasses import dataclass, field
 from typing import Any
-from unittest.mock import AsyncMock, Mock
 
 import orjson
 import pytest
@@ -35,6 +35,63 @@ class _StubEventBus(EventBus):
         return None
 
 
+class _RecordingEventBus(EventBus):
+    """Records commit calls for dispatch tests."""
+
+    def __init__(self) -> None:
+        self.committed: list[Event] = []
+
+    async def send_to_bus(self, stream: str, events_batch: list[Event]) -> None:
+        return None
+
+    def get_messages(self) -> AsyncIterator[Event]:
+        async def _once() -> AsyncIterator[Event]:
+            for event in []:
+                yield event
+
+        return _once()
+
+    async def commit(self, event: Event) -> None:
+        self.committed.append(event)
+
+    async def move_ptr_to_commited(self) -> None:
+        return None
+
+
+@dataclass
+class _StubKafkaMessage:
+    value: bytes
+    offset: int
+
+
+@dataclass
+class _StubKafkaProducer:
+    send_error: Exception | None = None
+    send_calls: list[tuple[str, bytes]] = field(default_factory=list)
+    send_keys: list[bytes] = field(default_factory=list)
+
+    async def send_and_wait(self, topic: str, payload: bytes, *, key: bytes) -> None:
+        if self.send_error is not None:
+            raise self.send_error
+        self.send_calls.append((topic, payload))
+        self.send_keys.append(key)
+
+
+@dataclass
+class _StubKafkaConsumer:
+    messages: dict[TopicPartition, list[_StubKafkaMessage]] = field(default_factory=dict)
+    commit_calls: list[dict[TopicPartition, int]] = field(default_factory=list)
+
+    async def seek_to_committed(self) -> None:
+        return None
+
+    async def getmany(self, timeout_ms: int = 100, max_records: int = 100) -> dict[TopicPartition, list[_StubKafkaMessage]]:
+        return self.messages
+
+    async def commit(self, offsets: dict[TopicPartition, int]) -> None:
+        self.commit_calls.append(offsets)
+
+
 def _sample_event(**overrides: Any) -> Event:
     defaults: dict[str, Any] = {
         "kind": EventKind.PredictionRequested,
@@ -49,17 +106,16 @@ def _sample_event(**overrides: Any) -> Event:
 
 @pytest.mark.asyncio
 async def test_send_to_bus_publishes_serialized_event():
-    producer = AsyncMock()
+    producer = _StubKafkaProducer()
     bus = KafkaEventBus(producer=producer)
     event = _sample_event()
 
     await bus.send_to_bus(EventStream.PredictionRequests, [event])
 
-    producer.send_and_wait.assert_awaited_once()
-    topic, payload, *_rest = producer.send_and_wait.await_args.args
-    key = producer.send_and_wait.await_args.kwargs.get("key")
+    assert len(producer.send_calls) == 1
+    topic, payload = producer.send_calls[0]
     assert topic == EventStream.PredictionRequests
-    assert key == b"req-1"
+    assert producer.send_keys == [b"req-1"]
     decoded = orjson.loads(payload)
     assert decoded["kind"] == EventKind.PredictionRequested
     assert decoded["aggregate_id"] == "req-1"
@@ -74,8 +130,7 @@ async def test_send_to_bus_requires_producer():
 
 @pytest.mark.asyncio
 async def test_send_to_bus_wraps_producer_errors():
-    producer = AsyncMock()
-    producer.send_and_wait.side_effect = RuntimeError("broker down")
+    producer = _StubKafkaProducer(send_error=RuntimeError("broker down"))
     bus = KafkaEventBus(producer=producer)
 
     with pytest.raises(BusException, match="Failed to publish events"):
@@ -84,12 +139,11 @@ async def test_send_to_bus_wraps_producer_errors():
 
 @pytest.mark.asyncio
 async def test_get_messages_decodes_event_and_sets_offsets():
-    consumer = AsyncMock()
+    consumer = _StubKafkaConsumer()
     bus = KafkaEventBus(consumer=consumer)
     partition = TopicPartition(EventStream.PredictionRequests, 0)
     raw_event = _sample_event().as_dict()
-    message = Mock(value=orjson.dumps(raw_event), offset=4)
-    consumer.getmany.return_value = {partition: [message]}
+    consumer.messages = {partition: [_StubKafkaMessage(value=orjson.dumps(raw_event), offset=4)]}
 
     events = [event async for event in bus.get_messages()]
 
@@ -101,28 +155,27 @@ async def test_get_messages_decodes_event_and_sets_offsets():
 
 @pytest.mark.asyncio
 async def test_get_messages_commits_poison_messages():
-    consumer = AsyncMock()
+    consumer = _StubKafkaConsumer()
     bus = KafkaEventBus(consumer=consumer)
     partition = TopicPartition(EventStream.PredictionRequests, 0)
-    message = Mock(value=b"{not-json", offset=2)
-    consumer.getmany.return_value = {partition: [message]}
+    consumer.messages = {partition: [_StubKafkaMessage(value=b"{not-json", offset=2)]}
 
     events = [event async for event in bus.get_messages()]
 
     assert events == []
-    consumer.commit.assert_awaited_once_with({partition: 3})
+    assert consumer.commit_calls == [{partition: 3}]
 
 
 @pytest.mark.asyncio
 async def test_commit_requires_partition_and_offset():
-    bus = KafkaEventBus(consumer=AsyncMock())
+    bus = KafkaEventBus(consumer=_StubKafkaConsumer())
     with pytest.raises(BusException, match="Cannot commit event"):
         await bus.commit(_sample_event())
 
 
 @pytest.mark.asyncio
 async def test_dispatch_event_commits_after_handler_failure():
-    event_bus = AsyncMock(spec=EventBus)
+    event_bus = _RecordingEventBus()
     event = _sample_event()
     event.meta["partition"] = TopicPartition(EventStream.PredictionRequests, 0)
     event.meta["offset"] = 1
@@ -132,7 +185,7 @@ async def test_dispatch_event_commits_after_handler_failure():
 
     await _dispatch_event(event_bus, failing_handler, event)
 
-    event_bus.commit.assert_awaited_once_with(event)
+    assert event_bus.committed == [event]
 
 
 @pytest.mark.asyncio
