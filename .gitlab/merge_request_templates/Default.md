@@ -4,13 +4,15 @@
 
 1) Auth and proxy review fixes — open redirect sanitization; refresh only on JWT expiry; `/auth/me` auto-refresh; cookie delete with matching attrs; guard 502 uses ErrorSchema
 
-2) Git hooks / MR body generator — template fix
+2) .gitlab-ci.yml — git runner fix
 
-3) GitLab MR template — template fix
+3) Git hooks / MR body generator — template fix
 
-4) Makefile / make.ps1 — template fix
+4) GitLab MR template — template fix
 
-5) src/common/tests/test_bus/test_kafka.py — replace AsyncMock/MagicMock with plain stub classes; mypy var-annotated fix
+5) Makefile / make.ps1 — template fix
+
+6) src/common/tests/test_bus/test_kafka.py — replace AsyncMock/MagicMock with plain stub classes; mypy var-annotated fix
 
 #### Changed
 
@@ -30,7 +32,7 @@ adapters/http/dependencies.py — split JWT cookies, session refresh, redirect s
 
 7) edge-architecture.md — admin_ui vs gateway; split cookies marked implemented
 
-8) Jira tracking — NLS-ADMIN status and sprint docs
+8) Jira tracking — git runner fix
 
 9) infra/.env.example — NEUROATLAS_* cookie alias env vars
 
@@ -51,4 +53,16 @@ tests/test_http/test_auth_handlers.py — updated
 tests/test_http/test_proxy.py — added
 tests/test_http/test_proxy_handlers.py — added
 
-3) auth-admin-ui-cookie-request-flow.md — cookie session, guard proxy, refresh sequence diagrams
+3) docs/ci/self-hosted-runner-plan.md — git runner fix
+
+4) docs/ci/self-hosted-runner.md — git runner fix
+
+5) auth-admin-ui-cookie-request-flow.md — cookie session, guard proxy, refresh sequence diagrams
+
+6) infra/ci/runner/docker-compose.yml — git runner fix
+
+7) scripts/ci/register-gitlab-runner.ps1 — git runner fix
+
+8) scripts/ci/register-gitlab-runner.sh — git runner fix
+
+9) scripts/jira/create_runner_task.ps1 — git runner fix

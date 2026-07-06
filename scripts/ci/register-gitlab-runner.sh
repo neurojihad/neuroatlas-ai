@@ -31,7 +31,7 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Registering runner '${RUNNER_NAME}' for ${GITLAB_PROJECT_URL} (tag: ${RUNNER_TAG})"
+echo "Registering runner '${RUNNER_NAME}' (tags/lock set in GitLab UI when creating the runner)"
 
 sudo gitlab-runner register \
   --non-interactive \
@@ -39,9 +39,6 @@ sudo gitlab-runner register \
   --token "${GITLAB_RUNNER_TOKEN}" \
   --executor "docker" \
   --docker-image "${DEFAULT_IMAGE}" \
-  --description "${RUNNER_NAME}" \
-  --tag-list "${RUNNER_TAG}" \
-  --run-untagged=false \
-  --locked=true
+  --description "${RUNNER_NAME}"
 
 echo "Done. Verify with: sudo gitlab-runner verify && sudo gitlab-runner list"

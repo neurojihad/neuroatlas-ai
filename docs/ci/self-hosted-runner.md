@@ -134,10 +134,9 @@ sudo gitlab-runner register \
   --token "$GITLAB_RUNNER_TOKEN" \
   --executor "docker" \
   --docker-image "python:3.12-slim-bookworm" \
-  --description "neuroatlas-self-hosted" \
-  --tag-list "neuroatlas-self-hosted" \
-  --run-untagged=false \
-  --locked=true
+  --description "neuroatlas-self-hosted"
 ```
+
+With GitLab 16.11+ runner tokens (`glrt-...`), **tags, lock, and untagged** are configured in the GitLab UI when you create the runner — not on the `register` command line.
 
 Edit `/etc/gitlab-runner/config.toml` if you need `privileged = false` (default), pull policy, or concurrency limits.

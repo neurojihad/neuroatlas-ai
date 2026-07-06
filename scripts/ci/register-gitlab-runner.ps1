@@ -37,7 +37,7 @@ try {
     throw "Docker Desktop is not running or not installed."
 }
 
-Write-Host "Registering runner '$RunnerName' for $ProjectUrl (tag: $RunnerTag)"
+Write-Host "Registering runner '$RunnerName' (tags/lock set in GitLab UI when creating the runner)"
 
 & $runnerExe register `
     --non-interactive `
@@ -45,10 +45,7 @@ Write-Host "Registering runner '$RunnerName' for $ProjectUrl (tag: $RunnerTag)"
     --token $token `
     --executor "docker" `
     --docker-image $DefaultImage `
-    --description $RunnerName `
-    --tag-list $RunnerTag `
-    --run-untagged=false `
-    --locked=true
+    --description $RunnerName
 
 Write-Host "Done. Restart service: Restart-Service gitlab-runner"
 Write-Host "Verify in GitLab → Settings → CI/CD → Runners"
