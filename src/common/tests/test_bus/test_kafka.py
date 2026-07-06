@@ -46,7 +46,8 @@ class _RecordingEventBus(EventBus):
 
     def get_messages(self) -> AsyncIterator[Event]:
         async def _once() -> AsyncIterator[Event]:
-            for event in []:
+            events: list[Event] = []
+            for event in events:
                 yield event
 
         return _once()

@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
-
 import jwt
 
 from common.core.entities.user import UserInfo

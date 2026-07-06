@@ -6,7 +6,12 @@ from httpx import ASGITransport, AsyncClient
 from admin_ui.auth.session import PkceStore, split_jwt
 from admin_ui.main import app
 from admin_ui.settings import settings
-from admin_ui.tests.fakes import DEFAULT_ACCESS_TOKEN, ExpiringAuthManager, FakeOidcClient, expired_access_token
+from admin_ui.tests.fakes import (
+    DEFAULT_ACCESS_TOKEN,
+    ExpiringAuthManager,
+    FakeOidcClient,
+    expired_access_token,
+)
 from common.adapters.auth.keycloak import NullAuthAdapter
 from common.core.entities.user import UserInfo
 
