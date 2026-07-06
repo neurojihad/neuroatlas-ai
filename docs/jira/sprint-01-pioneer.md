@@ -3,7 +3,7 @@
 **Milestones:** M1 (clinical API) + **M2 extension** (`admin_ui` BFF + browser Keycloak auth)  
 **Sprint goal:** Clinicians can log in via **browser** at `admin_ui` (:8000), session cookies hold the OIDC refresh token, and proxied calls to **patients** use a real **Keycloak JWT** with JIT `users` upsert.
 
-**Status:** **Active** in Jira (project key `NLS`) — sprint **Pioneer** (id 35).
+**Status:** **Closed** in Jira (project key `NLS`) — sprint **Pioneer** (id 35). Superseded by [Sprint 02](sprint-02-admin-ui-pioneer.md).
 
 > **Architecture note (vs PaymentGate):** NeuroAtlas does **not** exchange Keycloak → AtomID. The **same Keycloak access token** is validated at `admin_ui` / backends. Embedded React + auth handlers follow PaymentGate `admin_ui` layout. See [`auth-paymentgate-comparison.md`](../diagrams/auth-paymentgate-comparison.md).
 

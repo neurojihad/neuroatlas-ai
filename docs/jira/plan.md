@@ -155,9 +155,11 @@ Create in Jira: `.\scripts\jira\create_admin_ui_tasks.ps1` (adds to Sprint Pione
 
 ## Active sprint
 
-**Sprint 01 — Pioneer** (M1 + gateway/browser auth extension, Jira sprint id 35): see [`sprint-01-pioneer.md`](sprint-01-pioneer.md)
+**Sprint 02 — admin_ui Pioneer** (6–13 Jul 2026, Jira sprint id **68**): see [`sprint-02-admin-ui-pioneer.md`](sprint-02-admin-ui-pioneer.md)
 
-**Sprint goal:** Postgres-backed patients API with Keycloak auth, JIT user upsert, and **browser login through `admin_ui` BFF** (port 8000) proxying Keycloak JWT to backend services.
+**Sprint goal:** Browser login via **admin_ui** BFF (:8000) with Keycloak JWT proxy to patients; gateway stories (NLS-50..59) for traceability.
+
+**Previous:** [Sprint 01 — Pioneer](sprint-01-pioneer.md) (id 35, closed).
 
 Full backlog keys: [`backlog-keys.md`](backlog-keys.md) (45 stories + 8 epics incl. NLS-GW-01..10).
 
