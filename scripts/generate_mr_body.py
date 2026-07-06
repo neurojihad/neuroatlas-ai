@@ -419,10 +419,11 @@ def build_entries(base_ref: str, commits: list[tuple[str, str]], files: list[Fil
     return entries
 
 
-def format_entry(entry: MrEntry) -> str:
-    lines = [f"{entry.title} — {entry.body}"]
-    lines.extend(entry.sub_lines)
-    return "\n".join(lines)
+def format_entry(index: int, entry: MrEntry) -> str:
+    headline = f"{index}) {entry.title} — {entry.body}"
+    if not entry.sub_lines:
+        return headline
+    return headline + "\n" + "\n".join(entry.sub_lines)
 
 
 def render_body(
@@ -440,15 +441,15 @@ def render_body(
     ]
 
     for section in SECTION_ORDER:
-        lines.append(section)
+        lines.append(f"#### {section}")
         lines.append("")
         section_entries = by_section.get(section, [])
         if not section_entries:
-            lines.append("—")
+            lines.append("1) —")
         else:
-            for index, entry in enumerate(section_entries):
-                lines.append(format_entry(entry))
-                if index < len(section_entries) - 1:
+            for index, entry in enumerate(section_entries, start=1):
+                lines.append(format_entry(index, entry))
+                if index < len(section_entries):
                     lines.append("")
         lines.append("")
 
@@ -458,7 +459,7 @@ def render_body(
 def render_empty_body(base_ref: str, branch: str) -> str:
     return (
         f"<!-- No commits between `{base_ref}` and `{branch}`. Auto-updated by pre-push hook. -->\n\n"
-        "Fixed\n\n—\n\nChanged\n\n—\n\nAdded\n\n—\n"
+        "#### Fixed\n\n1) —\n\n#### Changed\n\n1) —\n\n#### Added\n\n1) —\n"
     )
 
 
