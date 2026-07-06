@@ -85,6 +85,7 @@ project prefix. Link each ticket to [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 | NLS-702 | Distributed tracing (OpenTelemetry) | Open | §12 |
 | NLS-703 | Housekeeper long-query monitoring (Postgres) | Partial | §4 Housekeeper |
 | NLS-704 | Structured audit log export | Open | §12 |
+| NLS-705 | Self-hosted GitLab Runner (docker executor, project-locked) | Partial | §12, `docs/ci/self-hosted-runner.md` |
 
 ---
 

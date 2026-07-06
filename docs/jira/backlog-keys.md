@@ -51,6 +51,7 @@ Project key: **NLS**. Plan refs (NLS-*) map to auto-assigned Jira keys.
 | NLS-702 | NLS-44 | EPIC-07 | OpenTelemetry tracing |
 | NLS-703 | NLS-45 | EPIC-07 | Housekeeper long-query monitoring |
 | NLS-704 | NLS-46 | EPIC-07 | Structured audit log export |
+| NLS-705 | NLS-71 | EPIC-07 | Self-hosted GitLab Runner (docker executor, project-locked) |
 | NLS-801 | NLS-47 | EPIC-08 | Next.js scaffold |
 | NLS-802 | NLS-48 | EPIC-08 | Keycloak login UI |
 | NLS-803 | NLS-49 | EPIC-08 | Gateway UI integration |

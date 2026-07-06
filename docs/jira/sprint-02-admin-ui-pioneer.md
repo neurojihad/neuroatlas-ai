@@ -67,6 +67,16 @@ Verify sprint membership:
 
 ---
 
+## Ops blocker — CI (Sprint 02 carry-over)
+
+| # | plan ref | Jira | Summary | Epic | Notes |
+|---|----------|------|---------|------|-------|
+| 20 | NLS-705 | NLS-71 | Self-hosted GitLab Runner (`neuroatlas-self-hosted`) | NLS-12 | Unblocks pipelines when shared minutes exhausted |
+
+Setup: [`docs/ci/self-hosted-runner.md`](../ci/self-hosted-runner.md)
+
+---
+
 ## Definition of Done (sprint)
 
 - [ ] Browser login through **admin_ui** reaches patients API with valid JWT

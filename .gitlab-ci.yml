@@ -1,3 +1,9 @@
+# Jobs require a self-hosted runner tagged neuroatlas-self-hosted (no shared minutes).
+# Setup: docs/ci/self-hosted-runner.md
+default:
+  tags:
+    - neuroatlas-self-hosted
+
 variables:
   BASE_IMAGE: python:3.12-slim-bookworm
   RUNNER_IMAGE: python:3.12-slim-bookworm
