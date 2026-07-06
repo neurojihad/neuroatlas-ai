@@ -209,7 +209,7 @@ Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
 
     "setup_hooks" {
         git config core.hooksPath .githooks
-        Write-Step "Git hooks installed (.githooks/pre-push refreshes MR_BODY.md on push)."
+        Write-Step "Git hooks installed (.githooks/pre-push refreshes MR_BODY.md + Default.md on push)."
     }
 
     "mr_body" {

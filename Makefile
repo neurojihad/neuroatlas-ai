@@ -25,7 +25,7 @@ init:
 setup_hooks:
 	git config core.hooksPath .githooks
 	chmod +x .githooks/pre-push .cursor/hooks/pre-push-mr-body.sh 2>/dev/null || true
-	@echo "Git hooks installed (.githooks/pre-push refreshes MR_BODY.md on push)."
+	@echo "Git hooks installed (.githooks/pre-push refreshes MR_BODY.md + Default.md on push)."
 
 mr_body:
 	poetry run python scripts/generate_mr_body.py
