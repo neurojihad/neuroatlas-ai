@@ -8,7 +8,7 @@
 
 3) Git hooks / MR body generator — template fix
 
-4) GitLab MR template — template fix
+4) GitLab MR template — git runner fix; template fix
 
 5) Makefile / make.ps1 — template fix
 
@@ -42,27 +42,29 @@ settings.py — AdminUiSettings (Keycloak, cookie aliases, service_map)
 
 #### Added
 
-1) admin_ui guard proxy `/guard/api/v1/*` — reverse proxy to patients / ml / housekeeper with Bearer JWT forward, X-User-Id, Correlation-Id, implicit refresh
+1) .runner_system_id — git runner fix
+
+2) admin_ui guard proxy `/guard/api/v1/*` — reverse proxy to patients / ml / housekeeper with Bearer JWT forward, X-User-Id, Correlation-Id, implicit refresh
 adapters/http/proxy.py — guard path → upstream URL resolution
 adapters/http/proxy_handlers.py — catch-all `/guard/{path}` reverse proxy with Bearer forward
 
-2) admin_ui tests — plain fakes + HTTP tests for auth, guard proxy, and review fixes
+3) admin_ui tests — plain fakes + HTTP tests for auth, guard proxy, and review fixes
 tests/fakes.py — plain test doubles (no unittest.mock)
 tests/test_auth_session/test_session.py — updated
 tests/test_http/test_auth_handlers.py — updated
 tests/test_http/test_proxy.py — added
 tests/test_http/test_proxy_handlers.py — added
 
-3) docs/ci/self-hosted-runner-plan.md — git runner fix
+4) docs/ci/self-hosted-runner-plan.md — git runner fix
 
-4) docs/ci/self-hosted-runner.md — git runner fix
+5) docs/ci/self-hosted-runner.md — git runner fix
 
-5) auth-admin-ui-cookie-request-flow.md — cookie session, guard proxy, refresh sequence diagrams
+6) auth-admin-ui-cookie-request-flow.md — cookie session, guard proxy, refresh sequence diagrams
 
-6) infra/ci/runner/docker-compose.yml — git runner fix
+7) infra/ci/runner/docker-compose.yml — git runner fix
 
-7) scripts/ci/register-gitlab-runner.ps1 — git runner fix
+8) scripts/ci/register-gitlab-runner.ps1 — git runner fix
 
-8) scripts/ci/register-gitlab-runner.sh — git runner fix
+9) scripts/ci/register-gitlab-runner.sh — git runner fix
 
-9) scripts/jira/create_runner_task.ps1 — git runner fix
+10) scripts/jira/create_runner_task.ps1 — git runner fix
