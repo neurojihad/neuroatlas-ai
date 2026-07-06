@@ -4,8 +4,8 @@ This sequence runs **inside each backend service** (patients, ml, …) after a K
 arrives in the `Authorization` header. It is the same whether the client sent the token
 **directly** (curl, Swagger) or the **gateway forwarded** it from a browser session.
 
-For the browser login and proxy path, see [Browser login via gateway](./auth-browser-gateway-flow.md)
-(including **Phase 2**: UI token exchange, gateway JWT validation, then proxy to backends).
+For the browser login and proxy path, see [Admin UI cookie request flow](./auth-admin-ui-cookie-request-flow.md)
+(session cookies → guard proxy → Bearer at backends).
 
 `/health` remains public on every service.
 
@@ -51,6 +51,7 @@ When `AUTH_ENABLED=false`, `NullAuthAdapter` returns a fixed dev user with
 
 ## Related diagrams
 
-- [Browser login via gateway](./auth-browser-gateway-flow.md)
+- [Admin UI cookie request flow](./auth-admin-ui-cookie-request-flow.md)
+- [Browser login via gateway](./auth-browser-gateway-flow.md) (legacy BFF notes)
 - [JIT user upsert](./auth-jit-upsert.md)
 - [Authentication architecture](./auth-architecture.md)

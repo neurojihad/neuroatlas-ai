@@ -16,9 +16,9 @@ class AdminUiSettings(Settings):
     keycloak_client_id: str = os.getenv("KEYCLOAK_UI_CLIENT_ID", "neuroatlas-ui")
     keycloak_client_secret: str = os.getenv("KEYCLOAK_UI_CLIENT_SECRET", "")
 
-    access_token_alias: str = "NEUROATLAS_ACCESS_TOKEN"
-    refresh_token_alias: str = "NEUROATLAS_REFRESH_TOKEN"
-    signature_token_alias: str = "NEUROATLAS_TOKEN_SIGN"
+    access_token_alias: str = os.getenv("NEUROATLAS_ACCESS_TOKEN", "NEUROATLAS_ACCESS_TOKEN")
+    refresh_token_alias: str = os.getenv("NEUROATLAS_REFRESH_TOKEN", "NEUROATLAS_REFRESH_TOKEN")
+    signature_token_alias: str = os.getenv("NEUROATLAS_TOKEN_SIGN", "NEUROATLAS_TOKEN_SIGN")
 
     patients_route: str = os.getenv("PATIENTS_ROUTE", "localhost:8001")
     ml_route: str = os.getenv("ML_ROUTE", "localhost:8002")

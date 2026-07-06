@@ -90,6 +90,7 @@ src/admin_ui/
 ## Related diagrams
 
 - [Admin UI browser login flow](./auth-admin-ui-browser-flow.md)
+- [Admin UI cookie request flow](./auth-admin-ui-cookie-request-flow.md)
 - [API Gateway client flow](./auth-api-gateway-flow.md)
 - [Authentication architecture](./auth-architecture.md)
 - [PaymentGate comparison](./auth-paymentgate-comparison.md)

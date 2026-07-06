@@ -322,6 +322,7 @@ Detailed diagrams live under [`docs/diagrams/`](diagrams/):
 | [edge-architecture.md](diagrams/edge-architecture.md) | **admin_ui vs gateway**, target module layout, decisions |
 | [auth-architecture.md](diagrams/auth-architecture.md) | Components, edge + backend layout |
 | [auth-admin-ui-browser-flow.md](diagrams/auth-admin-ui-browser-flow.md) | Clinician browser login via **admin_ui** (Pioneer) |
+| [auth-admin-ui-cookie-request-flow.md](diagrams/auth-admin-ui-cookie-request-flow.md) | **Cookie session** — split JWT, guard proxy, refresh |
 | [auth-api-gateway-flow.md](diagrams/auth-api-gateway-flow.md) | Mobile / partner API via **gateway** (planned) |
 | [auth-browser-gateway-flow.md](diagrams/auth-browser-gateway-flow.md) | Legacy unified BFF notes (superseded for browser by admin_ui) |
 | [auth-keycloak-user-registration.md](diagrams/auth-keycloak-user-registration.md) | Admin provisions users in Keycloak (full sequence) |

@@ -8,7 +8,7 @@ to `patients`. No AtomID token exchange — the same Keycloak JWT is forwarded t
 Keycloak client **`neuroatlas-ui`** (public, PKCE) redirects to `http://localhost:8000/api/v1/token`
 after login — configured in `infra/keycloak/import/neuroatlas-realm.json`.
 
-See also [edge architecture](./edge-architecture.md) for module layout and decisions.
+See also [edge architecture](./edge-architecture.md) for module layout and [cookie request flow](./auth-admin-ui-cookie-request-flow.md) for session/guard mechanics.
 
 ```mermaid
 sequenceDiagram
@@ -42,7 +42,7 @@ sequenceDiagram
     UI-->>You: Table on screen
 ```
 
-## HTTP routes (planned)
+## HTTP routes
 
 | Route | Purpose |
 |-------|---------|
@@ -51,10 +51,13 @@ sequenceDiagram
 | `POST /api/v1/token/refresh` | Refresh session |
 | `POST /api/v1/logout` | Clear cookies |
 | `GET /api/v1/auth/me` | Current user + roles |
-| `GET /guard/api/v1/patients*` | Proxy to patients service |
+| `/guard/api/v1/*` | Proxy to patients / ml / housekeeper |
+
+Detail: [cookie request flow](./auth-admin-ui-cookie-request-flow.md).
 
 ## Related diagrams
 
+- [Cookie session request flow](./auth-admin-ui-cookie-request-flow.md)
 - [Authenticated request flow (backend)](./auth-request-flow.md)
 - [JIT user upsert](./auth-jit-upsert.md)
 - [API Gateway client flow](./auth-api-gateway-flow.md) (non-browser clients)

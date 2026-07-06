@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Query, Request, Response, status
+from fastapi import APIRouter, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 from admin_ui.adapters.http import dependencies
@@ -89,13 +89,12 @@ async def token_callback(
 async def refresh_token(
     request: Request,
     response: Response,
-    refresh_cookie: Annotated[str | None, Cookie(alias="NEUROATLAS_REFRESH_TOKEN")] = None,
 ) -> ResponseSchema[None]:
     """Refresh the session using the httponly refresh token cookie."""
 
     settings: AdminUiSettings = request.app.state.settings
     oidc: KeycloakOidcClient = request.app.state.oidc_client
-    refresh_token_value = request.cookies.get(settings.refresh_token_alias) or refresh_cookie
+    refresh_token_value = request.cookies.get(settings.refresh_token_alias)
 
     if not refresh_token_value:
         raise Unauthorized("Missing refresh token.")
