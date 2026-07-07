@@ -9,7 +9,7 @@ class AdminUiSettings(Settings):
     """Settings for the admin UI BFF (browser entry + OIDC session + guard proxy)."""
 
     service_name: str = "admin_ui"
-    static_path: str = "frontend/static"
+    frontend_dir: str = os.getenv("FRONTEND_DIR", "frontend")
 
     keycloak_url: str = os.getenv("KEYCLOAK_URL", "http://localhost:8080")
     keycloak_realm: str = os.getenv("KEYCLOAK_REALM", "neuroatlas")
