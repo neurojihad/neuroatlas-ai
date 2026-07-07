@@ -35,7 +35,7 @@ jobs:
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
-      - run: poetry install --only main,dev,test --no-root
+      - run: poetry install --only main,dev --no-root
       - run: make fmt_check
       - run: make lint
 
@@ -51,7 +51,7 @@ jobs:
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
-      - run: poetry install --only main,dev,test --no-root
+      - run: poetry install --only main,dev,test,patients,housekeeper,ml,messaging --no-root
       - run: make test_in_ci
       - uses: actions/upload-artifact@v4
         if: always()
@@ -91,7 +91,9 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
       - run: poetry install --only main,dev --no-root
-      - run: make pip_audit
+      - name: pip audit (informational)
+        continue-on-error: true
+        run: poetry run pip-audit --local
 
   migrations:
     runs-on: ubuntu-latest

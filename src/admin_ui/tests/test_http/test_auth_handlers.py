@@ -31,7 +31,7 @@ def auth_cookies() -> dict[str, str]:
 async def test_start_auth_returns_authorize_url():
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get("/api/v1/auth")
     assert response.status_code == 200
     body = response.json()
@@ -46,7 +46,7 @@ async def test_start_auth_returns_authorize_url():
 async def test_auth_me_returns_401_without_cookies():
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get("/api/v1/auth/me")
     assert response.status_code == 401
 
@@ -56,7 +56,7 @@ async def test_auth_me_returns_user_with_session_cookies(auth_cookies: dict[str,
     async with app.router.lifespan_context(app):
         app.state.auth_manager = NullAuthAdapter()
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get("/api/v1/auth/me", cookies=auth_cookies)
     assert response.status_code == 200
     data = response.json()["data"]
@@ -78,7 +78,7 @@ async def test_token_callback_exchanges_code_and_sets_cookies():
         app.state.oidc_client = oidc
 
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost", follow_redirects=False) as client:
             response = await client.get(
                 "/api/v1/token",
                 params={"code": "auth-code", "state": challenge.state},
@@ -106,7 +106,7 @@ async def test_token_callback_blocks_external_redirect():
         app.state.oidc_client = oidc
 
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test", follow_redirects=False) as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost", follow_redirects=False) as client:
             response = await client.get(
                 "/api/v1/token",
                 params={"code": "auth-code", "state": challenge.state},
@@ -127,7 +127,7 @@ async def test_auth_me_refreshes_expired_session():
         app.state.oidc_client = oidc
         app.state.auth_manager = ExpiringAuthManager(user=refreshed_user)
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get(
                 "/api/v1/auth/me",
                 cookies={
@@ -147,7 +147,7 @@ async def test_auth_me_refreshes_expired_session():
 async def test_token_callback_rejects_unknown_state():
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get(
                 "/api/v1/token",
                 params={"code": "auth-code", "state": "unknown-state"},
@@ -164,7 +164,7 @@ async def test_refresh_token_updates_cookies():
     async with app.router.lifespan_context(app):
         app.state.oidc_client = oidc
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.post(
                 "/api/v1/token/refresh",
                 cookies={settings.refresh_token_alias: "old-refresh"},
@@ -179,7 +179,7 @@ async def test_refresh_token_updates_cookies():
 async def test_logout_clears_cookies_and_returns_logout_url(auth_cookies: dict[str, str]):
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.post("/api/v1/logout", cookies=auth_cookies)
 
     assert response.status_code == 200

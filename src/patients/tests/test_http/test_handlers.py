@@ -8,7 +8,7 @@ from patients.main import app
 async def test_register_patient_with_null_auth():
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.post(
                 "/api/v1/patients",
                 json={"date_of_birth_year": 2018, "sex": "F"},
@@ -21,7 +21,7 @@ async def test_register_patient_with_null_auth():
 async def test_list_patients_with_null_auth():
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get("/api/v1/patients")
     assert response.status_code == 200
     assert "data" in response.json()

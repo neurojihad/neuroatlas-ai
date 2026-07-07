@@ -36,7 +36,7 @@ async def test_guard_proxy_forwards_bearer_and_user_headers(auth_cookies: dict[s
         app.state.http_client = http_client
         app.state.auth_manager = FakeAuthManager()
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get(
                 "/guard/api/v1/patients",
                 cookies=auth_cookies,
@@ -56,7 +56,7 @@ async def test_guard_proxy_forwards_bearer_and_user_headers(auth_cookies: dict[s
 async def test_guard_proxy_returns_401_without_session():
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get("/guard/api/v1/patients")
     assert response.status_code == 401
 
@@ -66,7 +66,7 @@ async def test_guard_proxy_returns_404_for_unknown_route(auth_cookies: dict[str,
     async with app.router.lifespan_context(app):
         app.state.auth_manager = FakeAuthManager()
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get("/guard/api/v1/unknown", cookies=auth_cookies)
     assert response.status_code == 404
 
@@ -89,7 +89,7 @@ async def test_guard_proxy_refreshes_expired_session():
         app.state.oidc_client = oidc
         app.state.http_client = http_client
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get("/guard/api/v1/patients", cookies=expired_cookies)
 
     assert response.status_code == 200
@@ -111,7 +111,7 @@ async def test_guard_proxy_does_not_refresh_invalid_token(auth_cookies: dict[str
         app.state.oidc_client = oidc
         app.state.http_client = http_client
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.get(
                 "/guard/api/v1/patients",
                 cookies={**auth_cookies, settings.refresh_token_alias: "old-refresh"},
@@ -129,7 +129,7 @@ async def test_guard_proxy_ml_path_rewrite(auth_cookies: dict[str, str]):
         app.state.http_client = http_client
         app.state.auth_manager = FakeAuthManager()
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
             response = await client.post("/guard/api/v1/ml/predict", cookies=auth_cookies, json={})
 
     assert response.status_code == 200

@@ -7,11 +7,11 @@ via `.github/workflows/ci.yml`.
 
 | Job | Makefile targets | Notes |
 |-----|------------------|-------|
-| `check` | `fmt_check`, `lint` | Required on every push / PR |
-| `unit` | `test_in_ci` | Uploads `coverage.xml` and JUnit reports |
-| `sast` | `sast` | bandit |
-| `audit` | `pip_audit` | Audits installed packages only (`--local`); allowed to fail (`continue-on-error`) |
-| `migrations` | `migrate`, `check_migrations` | Postgres service (`pgvector/pgvector:pg16`) |
+| `check` | `fmt_check`, `lint` | `--only main,dev` |
+| `unit` | `test_in_ci` | `--only main,dev,test,patients,housekeeper,ml,messaging` (excludes heavy `rag`/`llm` groups) |
+| `sast` | `sast` | `--only main,dev` |
+| `audit` | `pip-audit --local` | `--only main,dev`; informational (`continue-on-error`) |
+| `migrations` | `migrate`, `check_migrations` | `--only main,housekeeper` (33 packages, no PyTorch) |
 | `build-*` | Docker | Push to `ghcr.io/neurojihad/neuroatlas-ai/{patients,ml,housekeeper}` on `master` when paths change, or on semver tags |
 
 ## Local parity
