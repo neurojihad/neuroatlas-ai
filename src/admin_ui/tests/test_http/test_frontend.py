@@ -55,7 +55,7 @@ async def test_serve_index_injects_runtime_env_from_cra_build(tmp_path: Path):
         '<!doctype html><html lang="en"><head>'
         "<script>window._env_={}</script>"
         '<script defer="defer" src="/static/js/main.js"></script>'
-        "</head><body><div id=\"root\"></div></body></html>"
+        '</head><body><div id="root"></div></body></html>'
     )
     (tmp_path / "index.html").write_text(cra_index, encoding="utf-8")
     settings = AdminUiSettings(frontend_dir=str(tmp_path))
