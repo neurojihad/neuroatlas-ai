@@ -1,168 +1,89 @@
-<!-- Generated from `origin/master..HEAD` on branch `NLS-64-set-admin_ui-guard-proxy-to-services`. Auto-updated by pre-push hook. -->
+<!-- Generated from `origin/master..HEAD` on branch `NSL-65-realise-react-admin-UI-auth-pages`. Auto-updated by pre-push hook. -->
 
 #### Fixed
 
 1) Auth and proxy review fixes — open redirect sanitization; refresh only on JWT expiry; `/auth/me` auto-refresh; cookie delete with matching attrs; guard 502 uses ErrorSchema
 
-2) .gitignore — gitignore fix; body fix
+2) Makefile / make.ps1 — frontend fix
 
-3) .idea/neuroatlas.iml — gitignore fix
+3) admin_ui guard proxy `/guard/api/v1/*` — frontend fix
 
-4) poetry.lock — poetry.lock
+4) admin_ui tests — frontend fix
 
-5) src/common/application/healthcheck.py — check fix
-
-6) src/common/application/settings.py — settings.py
-
-7) src/common/core/exceptions.py — exceptions.py
-
-8) src/common/core/ports/uow.py — check fix
-
-9) src/common/http/error_handlers.py — error_handlers.py
-
-10) src/common/tests/test_bus/test_kafka.py — replace AsyncMock/MagicMock with plain stub classes; mypy var-annotated fix
-
-11) src/housekeeper/migrations/env.py — env.py
-
-12) src/patients/adapters/http/handlers.py — handlers.py
-
-13) src/patients/domain/commands.py — commands.py
-
-14) src/patients/lifespan.py — lifespan.py
+5) src/common/adapters/http/auth_dependencies.py — frontend fix
 
 #### Changed
 
-1) .gitlab-ci.yml — github migration fix; git runner fix
+1) admin_ui auth session (PKCE, cookies, JWT split) — frontend fix
 
-2) README.md — embedded jira into project
-
-3) admin_ui OIDC auth handlers — token, refresh, logout, `/auth/me`; open-redirect guard; cookie env vars
-adapters/http/auth.py — routes `/api/v1/auth`, `/token`, `/auth/me`, refresh, logout
-adapters/http/dependencies.py — split JWT cookies, session refresh, redirect sanitization
-adapters/http/schemas.py — added
-
-4) admin_ui auth session (PKCE, cookies, JWT split) — add handlers
-
-5) docs/ARCHITECTURE.md — github migration fix; add admin_ui scaffold; fix diagrams; gitignore fix
-
-6) infra/.env.example — add keycloak client; add admin_ui scaffold; embedded jira into project; gitignore fix
-
-7) infra/ci/build.ci.yml — github migration fix
-
-8) infra/ci/deploy.ci.yml — github migration fix
-
-9) infra/ci/prepare.ci.yml — github migration fix
-
-10) infra/ci/test.ci.yml — github migration fix; check fix
-
-11) infra/infra.compose.yml — gitignore fix
-
-12) infra/kafka/init_topics.py — gitignore fix
-
-13) pyproject.toml — Merge branch 'master' into NLS-006-add-models-into-repo; check fix
-
-14) src/admin_ui/ service — hexagonal-style shell
-Dockerfile — uvicorn on port 8000, non-root user
-adapters/__init__.py — added
-adapters/http/__init__.py — added
-lifespan.py — httpx client, auth_manager, PKCE store, OIDC client on app.state
-main.py — FastAPI entry via app_factory.create()
-settings.py — AdminUiSettings (Keycloak, cookie aliases, service_map)
+2) src/admin_ui/ service — hexagonal-style shell
+ui/.gitignore — added
+ui/package.json — added
+ui/public/index.html — added
+ui/src/App.js — added
+ui/src/ConfigError.js — added
+ui/src/SuspenseLoader.js — added
+ui/src/app/providers/AuthProvider.jsx — added
+ui/src/app/providers/QueryClientProvider.jsx — added
+ui/src/app/providers/index.jsx — added
+ui/src/index.css — added
+ui/src/index.js — added
+ui/src/layout/AppLayout.jsx — added
+ui/src/layout/BackgroundLayer.jsx — added
+ui/src/layout/components/Menu.jsx — added
+ui/src/layout/index.js — added
+ui/src/neural-nexus.css — added
+ui/src/pages/auth/AuthLayout.js — added
+ui/src/pages/auth/Callback.js — added
+ui/src/pages/auth/Login.js — added
+ui/src/pages/dashboard/Dashboard.js — added
+ui/src/pages/dashboard/index.js — added
+ui/src/pages/notfound/NotFound.js — added
+ui/src/pages/patients/Patients.js — added
+ui/src/pages/patients/index.js — added
+ui/src/pages/patients/queries/patients.js — added
+ui/src/pages/patients/ui/PatientProfile.js — added
+ui/src/pages/patients/ui/PatientsList.js — added
+ui/src/pages/session/Session.js — added
+ui/src/pages/session/index.js — added
+ui/src/setupProxy.js — added
+ui/src/shared/api/HttpAuthBase.js — added
+ui/src/shared/api/HttpBase.js — added
+ui/src/shared/api/httpAuthApi.js — added
+ui/src/shared/api/httpPatientsApi.js — added
+ui/src/shared/api/httpUserApi.js — added
+ui/src/shared/components/NavigateToAuth.js — added
+ui/src/shared/components/ProtectedRedirect.js — added
+ui/src/shared/components/ProtectedRoute.js — added
+ui/src/shared/config/apiConfig.js — added
+ui/src/shared/config/index.js — added
+ui/src/shared/config/queryClient.js — added
+ui/src/shared/constants/api.js — added
+ui/src/shared/constants/menu.js — added
+ui/src/shared/constants/roles.js — added
+ui/src/shared/hooks/useAuth.js — added
+ui/src/shared/hooks/withSuspense.js — added
+ui/src/shared/services/AuthService.js — added
+ui/src/shared/utils/generate.js — added
 
 #### Added
 
-1) .cursor/ — add admin_ui scaffold; embedded jira into project; body fix
+1) .vscode/settings.json — frontend fix
 
-2) .github/workflows/ci.yml — github migration fix
+2) bin/make.bat — frontend fix
 
-3) Git hooks / MR body generator — github migration fix; template fix; body fix
+3) bin/make.cmd — frontend fix
 
-4) GitHub PR template — github migration fix; Move merge request template to GitLab layout for repo migration.
+4) docs/design/neural-nexus-demo.html — frontend fix
 
-5) Makefile / make.ps1 — template fix; add admin_ui scaffold; gitignore fix; body fix
+5) make.bat — frontend fix
 
-6) admin_ui guard proxy `/guard/api/v1/*` — reverse proxy to patients / ml / housekeeper with Bearer JWT forward, X-User-Id, Correlation-Id, implicit refresh
-adapters/http/proxy.py — guard path → upstream URL resolution
-adapters/http/proxy_handlers.py — catch-all `/guard/{path}` reverse proxy with Bearer forward
+6) scripts/dev/install-make-command.ps1 — frontend fix
 
-7) admin_ui tests — plain fakes + HTTP tests for auth, guard proxy, and review fixes
-tests/fakes.py — plain test doubles (no unittest.mock)
-tests/test_auth_session/test_session.py — added
-tests/test_http/test_auth_handlers.py — added
-tests/test_http/test_health.py — GET /health → 200, service admin_ui
-tests/test_http/test_proxy.py — added
-tests/test_http/test_proxy_handlers.py — added
+7) scripts/dev/install-venv-make.ps1 — frontend fix
 
-8) docs/ci/github-actions.md — github migration fix
+8) scripts/dev/pycharm-terminal-init.ps1 — frontend fix
 
-9) auth-admin-ui-browser-flow.md — add keycloak client; add admin_ui scaffold
+9) scripts/dev/setup-pycharm-make.ps1 — frontend fix
 
-10) auth-admin-ui-cookie-request-flow.md — cookie session, guard proxy, refresh sequence diagrams
-
-11) auth-api-gateway-flow.md — add admin_ui scaffold
-
-12) auth-architecture.md — add admin_ui scaffold; fix diagrams; gitignore fix
-
-13) auth-browser-gateway-flow.md — add keycloak client; fix diagrams
-
-14) auth-jit-upsert.md — fix diagrams
-
-15) auth-keycloak-user-registration.md — add keycloak client; fix diagrams; gitignore fix
-
-16) auth-paymentgate-comparison.md — fix diagrams
-
-17) auth-request-flow.md — fix diagrams
-
-18) auth-users-schema.md — fix diagrams
-
-19) edge-architecture.md — add admin_ui scaffold
-
-20) Jira tracking — git runner fix; add keycloak client; add admin_ui scaffold; add admin_ui plan; …
-
-21) infra/keycloak/import/neuroatlas-realm.json — add keycloak client; gitignore fix
-
-22) scripts/jira/bootstrap_backlog.ps1 — embedded jira into project
-
-23) scripts/jira/bootstrap_pioneer.ps1 — embedded jira into project
-
-24) scripts/jira/create_admin_ui_tasks.ps1 — add admin_ui plan
-
-25) scripts/jira/create_gateway_auth_tasks.ps1 — embedded jira into project
-
-26) scripts/jira/create_runner_task.ps1 — git runner fix
-
-27) scripts/jira/jira_api.ps1 — embedded jira into project
-
-28) scripts/jira/jira_api.sh — embedded jira into project
-
-29) scripts/jira/rename_project_key.ps1 — embedded jira into project
-
-30) src/common/adapters/auth/base.py — base.py
-
-31) src/common/adapters/auth/keycloak.py — keycloak.py
-
-32) src/common/adapters/database/models/user.py — gitignore fix
-
-33) src/common/adapters/database/user_repository.py — user_repository.py
-
-34) src/common/adapters/http/auth_dependencies.py — stash pop fix; body fix
-
-35) src/common/core/entities/user.py — user.py
-
-36) src/common/core/ports/auth.py — auth.py
-
-37) src/common/core/ports/user_repository.py — user_repository.py
-
-38) src/common/tests/paths.py — add keycloak client
-
-39) src/common/tests/test_adapters/test_auth.py — test_auth.py
-
-40) src/common/tests/test_infra/test_keycloak_realm.py — add keycloak client
-
-41) src/common/tests/test_utils/test_identifiers.py — test_identifiers.py
-
-42) src/common/utils/identifiers.py — identifiers.py
-
-43) src/housekeeper/migrations/versions/0002_users.py — 0002_users.py
-
-44) src/patients/tests/test_http/test_handlers.py — test_handlers.py
+10) scripts/dev/venv-make.cmd — frontend fix

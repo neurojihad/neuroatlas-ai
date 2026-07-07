@@ -33,12 +33,12 @@ def create(
 
     register_exception_handlers(app)
 
-    for router in routers:
-        app.include_router(router)
-
     @app.get("/health", tags=["service"])
     async def health() -> dict[str, str]:
         """Liveness probe."""
         return {"status": "ok", "service": settings.service_name}
+
+    for router in routers:
+        app.include_router(router)
 
     return app
