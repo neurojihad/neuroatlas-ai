@@ -19,7 +19,7 @@ run_generate() {
 
 run_generate || true
 
-for path in MR_BODY.md .gitlab/merge_request_templates/Default.md; do
+for path in MR_BODY.md .github/pull_request_template.md; do
   if [[ -f "$path" ]]; then
     git add "$path" 2>/dev/null || true
   fi

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a GitLab MR description (Fixed / Changed / Added) from branch commits and diffs."""
+"""Build a GitHub PR description (Fixed / Changed / Added) from branch commits and diffs."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 OUTPUT_PATH = Path("MR_BODY.md")
-TEMPLATE_PATH = Path(".gitlab/merge_request_templates/Default.md")
+TEMPLATE_PATH = Path(".github/pull_request_template.md")
 OUTPUT_PATHS = (OUTPUT_PATH, TEMPLATE_PATH)
 BASE_CANDIDATES = ("origin/master", "origin/main", "master", "main")
 
@@ -196,8 +196,8 @@ def group_key(path: str) -> str:  # noqa: C901
         return "src/admin_ui/"
     if path.startswith(".githooks/") or path == "scripts/generate_mr_body.py":
         return "Git hooks / MR generator"
-    if path.startswith(".gitlab/merge_request_templates/"):
-        return "GitLab MR template"
+    if path in {".github/pull_request_template.md", ".github/merge_request_templates/Default.md"}:
+        return "GitHub PR template"
     if path.startswith(".cursor/"):
         return ".cursor/"
     return path
@@ -213,7 +213,7 @@ def group_display_title(group: str, files: list[FileChange]) -> str:
         "src/admin_ui/": "src/admin_ui/ service",
         "Makefile / make.ps1": "Makefile / make.ps1",
         "Git hooks / MR generator": "Git hooks / MR body generator",
-        "GitLab MR template": "GitLab MR template",
+        "GitHub PR template": "GitHub PR template",
     }
     if group in titles:
         return titles[group]

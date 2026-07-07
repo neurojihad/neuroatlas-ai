@@ -706,7 +706,7 @@ microservices.io target              NeuroAtlas today (Jul 2026)
 | **Hexagonal architecture** | Ports & adapters per service | **Implemented** | `common/` + per-service `domain/` / `adapters/` |
 | **Shared library (`common/`)** | Cross-cutting infra only | **Implemented** | Auth, bus, HTTP envelopes — not business logic |
 | **Distributed transactions (Saga / outbox)** | Cross-service consistency | **Planned** | No saga/outbox yet |
-| **Per-service CI/CD** | Independent deploy pipelines | **Planned** | Monorepo Makefile; GitLab CI scaffold only |
+| **Per-service CI/CD** | Independent deploy pipelines | **Planned** | Monorepo Makefile; GitHub Actions CI (`.github/workflows/ci.yml`) |
 | **Observability** | Metrics, tracing, audit | **Partial** | structlog audit fields; Prometheus declared not wired |
 
 **Legend:** **Implemented** = in repo and used in dev/test · **Partial** = scaffold or subset · **Planned** = documented, not built.
