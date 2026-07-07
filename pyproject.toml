@@ -101,6 +101,9 @@ asyncio_mode = "auto"
 python_files = "test*.py"
 testpaths = "src"
 pythonpath = "src"
+markers = [
+    "integration: live-stack smoke tests (require SMOKE_INTEGRATION=1)",
+]
 
 [tool.coverage.run]
 branch = true

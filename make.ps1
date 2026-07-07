@@ -192,6 +192,8 @@ Infra / Docker:
   .\make.ps1 init              copy infra/.env.example to infra/.env
   .\make.ps1 up_infra          Postgres + Kafka + Keycloak
   .\make.ps1 down_infra
+  .\make.ps1 keycloak_ensure   reconcile neuroatlas-ui client (stale volume fix)
+  .\make.ps1 reset_keycloak    wipe Keycloak data + re-import realm
   .\make.ps1 up_app            build and start app services (browser: http://localhost:8000)
   .\make.ps1 down_app
   .\make.ps1 up_admin / down_admin
@@ -213,6 +215,7 @@ DB:
 
 Quality:
   .\make.ps1 test / lint / fmt / check / sast
+  .\make.ps1 smoke_admin_ui   NLS-68 E2E smoke (live stack; see docs/smoke/admin-ui-e2e.md)
 
 Windows / PyCharm (once):
   .\make.ps1 setup_make       install make into .venv (then: make fmt in new terminal)
@@ -276,6 +279,18 @@ Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
 
     "down_infra" {
         Invoke-Compose -Infra @("--profile", "storage", "down")
+    }
+
+    "keycloak_ensure" {
+        Invoke-Compose -Infra @("--profile", "storage", "up", "keycloak-init")
+    }
+
+    "reset_keycloak" {
+        Invoke-Compose -Infra @("--profile", "storage", "rm", "-sf", "keycloak", "keycloak-init")
+        $docker = Resolve-DockerExecutable
+        & $docker volume rm neuroatlas-infra_keycloak_data 2>$null
+        Invoke-Compose -Infra @("--profile", "storage", "up", "-d", "keycloak")
+        & $PSCommandPath keycloak_ensure
     }
 
     "up_app" {
@@ -426,6 +441,11 @@ Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
     "test_k" {
         if (-not $k) { throw "Usage: .\make.ps1 test_k -k `"pattern`"" }
         Invoke-PoetryRun pytest src "-k=$k"
+    }
+
+    "smoke_admin_ui" {
+        $env:SMOKE_INTEGRATION = "1"
+        Invoke-PoetryRun --with patients pytest src/tests/integration -m integration -v
     }
 
     "relock" {

@@ -86,6 +86,22 @@ Setup: [`docs/ci/self-hosted-runner.md`](../ci/self-hosted-runner.md)
 
 ---
 
+## NLS-68 — E2E smoke (admin_ui → patients + JIT)
+
+Setup and run: [`docs/smoke/admin-ui-e2e.md`](../smoke/admin-ui-e2e.md)
+
+```powershell
+# infra/.env: AUTH_ENABLED=true, SMOKE_USERNAME, SMOKE_PASSWORD
+.\make.ps1 up_infra
+.\make.ps1 migrate
+.\make.ps1 up_app
+.\make.ps1 smoke_admin_ui
+```
+
+Manual browser check: [http://localhost:8000](http://localhost:8000) → login → Patients Registry.
+
+---
+
 ## Recommended agent order
 
 1. **NLS-ADMIN-01 → NLS-ADMIN-03 → NLS-ADMIN-04 → NLS-ADMIN-06 → NLS-ADMIN-07**
