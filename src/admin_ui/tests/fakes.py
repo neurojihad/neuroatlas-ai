@@ -15,7 +15,7 @@ from common.core.ports.auth import AuthAdapter
 DEFAULT_ACCESS_TOKEN = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.fake-signature"
 
 
-def expired_access_token() -> str:
+def expired_access_token() -> Any:
     """JWT with exp in the past (for refresh-path tests)."""
     return jwt.encode({"sub": "test", "exp": 1}, "secret", algorithm="HS256")
 
