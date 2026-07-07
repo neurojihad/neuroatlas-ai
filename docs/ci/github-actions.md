@@ -10,7 +10,7 @@ via `.github/workflows/ci.yml`.
 | `check` | `fmt_check`, `lint` | Required on every push / PR |
 | `unit` | `test_in_ci` | Uploads `coverage.xml` and JUnit reports |
 | `sast` | `sast` | bandit |
-| `audit` | `pip_audit` | Allowed to fail (`continue-on-error`) |
+| `audit` | `pip_audit` | Audits installed packages only (`--local`); allowed to fail (`continue-on-error`) |
 | `migrations` | `migrate`, `check_migrations` | Postgres service (`pgvector/pgvector:pg16`) |
 | `build-*` | Docker | Push to `ghcr.io/neurojihad/neuroatlas-ai/{patients,ml,housekeeper}` on `master` when paths change, or on semver tags |
 

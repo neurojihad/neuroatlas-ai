@@ -151,7 +151,7 @@ test_in_ci:
 		-n auto
 
 pip_audit:
-	poetry run pip-audit
+	poetry run pip-audit --local
 
 # Migrations (all run through Housekeeper; requires Postgres — run `make up_infra` first)
 
