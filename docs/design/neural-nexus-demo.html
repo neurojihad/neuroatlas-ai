@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroAtlas — Neural Nexus Design Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Orbitron:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --void: #050810;
+      --deep: #0b1220;
+      --panel: rgba(12, 24, 48, 0.78);
+      --neon-cyan: #00e5ff;
+      --neon-magenta: #ff2bd6;
+      --bio-green: #39ff88;
+      --warn-amber: #ffb020;
+      --alert-red: #ff3b5c;
+      --text-primary: #e8f4ff;
+      --text-muted: #7b8fa8;
+      --border-glow: rgba(0, 229, 255, 0.35);
+      --font-display: "Orbitron", sans-serif;
+      --font-body: "IBM Plex Sans", sans-serif;
+      --font-mono: "IBM Plex Mono", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--void);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Demo chrome (not part of final app) ── */
+    .demo-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: rgba(5, 8, 16, 0.95);
+      border-bottom: 1px solid var(--border-glow);
+      backdrop-filter: blur(8px);
+      flex-wrap: wrap;
+    }
+    .demo-bar span {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-right: 0.5rem;
+    }
+    .demo-tab {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid rgba(123, 143, 168, 0.3);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .demo-tab:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+    .demo-tab.active {
+      background: rgba(0, 229, 255, 0.12);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+    }
+
+    /* ── Background ── */
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .bg-mesh {
+      position: absolute;
+      inset: 0;
+      opacity: 0.18;
+      background-image:
+        radial-gradient(circle at 20% 30%, rgba(0, 229, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(255, 43, 214, 0.1) 0%, transparent 50%);
+    }
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .scanline {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+      );
+      animation: scan 8s linear infinite;
+    }
+    @keyframes scan {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(48px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .scanline { animation: none; }
+      .pulse-dot { animation: none; }
+      .loader-ring { animation: none; }
+    }
+
+    /* ── Page views ── */
+    .page { display: none; position: relative; z-index: 1; min-height: 100vh; padding-top: 52px; }
+    .page.active { display: block; }
+
+    /* ── Shared components ── */
+    .hud-corners {
+      position: relative;
+      border: 1px solid var(--border-glow);
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+    }
+    .hud-corners::before,
+    .hud-corners::after {
+      content: "";
+      position: absolute;
+      width: 12px; height: 12px;
+      border: 2px solid var(--neon-cyan);
+    }
+    .hud-corners::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+    .hud-corners::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+    .btn-primary {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      padding: 0.9rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(0, 229, 255, 0.08));
+      color: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.2), inset 0 0 20px rgba(0, 229, 255, 0.05);
+      transition: box-shadow 0.2s, transform 0.15s;
+      width: 100%;
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 32px rgba(0, 229, 255, 0.4);
+      transform: translateY(-1px);
+    }
+    .btn-ghost {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.5rem 1rem;
+      border: 1px solid rgba(123, 143, 168, 0.4);
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-ghost:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+
+    .role-chip {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      padding: 0.25rem 0.6rem;
+      border-radius: 2px;
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+    }
+    .role-chip.admin { border-color: var(--neon-magenta); color: var(--neon-magenta); box-shadow: 0 0 8px rgba(255, 43, 214, 0.3); }
+
+    .metric-tile {
+      padding: 1.25rem;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      background: rgba(11, 18, 32, 0.8);
+      border-radius: 4px;
+    }
+    .metric-tile .value {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      color: var(--neon-cyan);
+      line-height: 1;
+    }
+    .metric-tile .label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      margin-top: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-right: 0.35rem;
+    }
+    .status-dot.green { background: var(--bio-green); box-shadow: 0 0 6px var(--bio-green); }
+    .status-dot.amber { background: var(--warn-amber); box-shadow: 0 0 6px var(--warn-amber); }
+
+    /* ── PAGE 1: Login ── */
+    #page-login {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    #page-login.active { display: flex; }
+    .login-card {
+      width: min(420px, 100%);
+      padding: 2.5rem 2rem;
+    }
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .logo-mark {
+      width: 56px; height: 56px;
+      border: 2px solid var(--neon-cyan);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      color: var(--neon-cyan);
+      box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+    }
+    .login-title {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      letter-spacing: 0.12em;
+      color: var(--text-primary);
+    }
+    .login-sub {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .login-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-glow), transparent);
+      margin: 1.5rem 0;
+    }
+    .login-footer {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+
+    /* ── App shell (pages 2–5) ── */
+    .app-shell { display: flex; min-height: calc(100vh - 52px); }
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--deep);
+      border-right: 1px solid rgba(0, 229, 255, 0.15);
+      padding: 1.25rem 0;
+    }
+    .sidebar-brand {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      color: var(--neon-cyan);
+      padding: 0 1.25rem 1.25rem;
+      border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+    }
+    .nav-item {
+      display: block;
+      padding: 0.75rem 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      border-left: 3px solid transparent;
+      cursor: default;
+    }
+    .nav-item.active {
+      color: var(--neon-cyan);
+      background: rgba(0, 229, 255, 0.06);
+      border-left-color: var(--neon-cyan);
+    }
+    .main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.5rem;
+      background: rgba(11, 18, 32, 0.9);
+      border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+    }
+    .topbar-title {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+    }
+    .topbar-user {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .content { padding: 1.5rem; flex: 1; overflow: auto; }
+
+    /* ── PAGE 2: Dashboard ── */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 1rem;
+    }
+    .panel {
+      padding: 1.25rem;
+      border: 1px solid rgba(0, 229, 255, 0.15);
+      background: rgba(11, 18, 32, 0.6);
+      border-radius: 4px;
+    }
+    .panel h3 {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .activity-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(123, 143, 168, 0.15);
+      font-size: 0.85rem;
+    }
+    .activity-row code {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--neon-cyan);
+    }
+    .neural-viz {
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .neural-viz svg { width: 100%; height: 100%; opacity: 0.7; }
+
+    /* ── PAGE 3: Patients table ── */
+    .toolbar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.6rem 1rem;
+      background: rgba(11, 18, 32, 0.8);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+    .search-input::placeholder { color: var(--text-muted); }
+    .filter-chip {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 0.5rem 0.85rem;
+      border: 1px solid rgba(123, 143, 168, 0.3);
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+    .filter-chip.active { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .data-table th {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+    }
+    .data-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(123, 143, 168, 0.1);
+    }
+    .data-table tr:hover td { background: rgba(0, 229, 255, 0.04); }
+    .data-table code {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--neon-cyan);
+    }
+
+    /* ── PAGE 4: Patient profile ── */
+    .profile-hero {
+      margin-bottom: 1.5rem;
+    }
+    .profile-id {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      letter-spacing: 0.06em;
+      color: var(--neon-cyan);
+    }
+    .profile-meta {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+    .tab-strip {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(0, 229, 255, 0.15);
+    }
+    .tab {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.75rem 1.25rem;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .tab.active { color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); }
+    .tab.locked { opacity: 0.5; }
+    .sparkline {
+      height: 60px;
+      margin: 1rem 0;
+      background: linear-gradient(180deg, rgba(0, 229, 255, 0.08), transparent);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+    .sparkline::after {
+      content: "";
+      position: absolute;
+      bottom: 20%;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg,
+        transparent 0%, var(--neon-cyan) 10%, var(--bio-green) 30%,
+        var(--neon-cyan) 50%, var(--bio-green) 70%, transparent 100%);
+      opacity: 0.6;
+      clip-path: polygon(0 50%, 5% 30%, 12% 60%, 20% 20%, 28% 70%, 35% 40%, 42% 55%, 50% 25%, 58% 65%, 65% 35%, 72% 50%, 80% 20%, 88% 60%, 95% 40%, 100% 50%, 100% 100%, 0 100%);
+    }
+
+    /* ── PAGE 5: Session ── */
+    .session-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    .identity-card .email {
+      font-size: 1.1rem;
+      margin: 0.5rem 0;
+    }
+    .identity-card .uid {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .access-matrix td:first-child {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+    }
+    .check { color: var(--bio-green); }
+    .cross { color: rgba(123, 143, 168, 0.4); }
+
+    /* ── PAGE 5b: Callback loader ── */
+    #page-callback {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    #page-callback.active { display: flex; }
+    .loader-card {
+      width: min(360px, 100%);
+      padding: 2.5rem;
+      text-align: center;
+    }
+    .loader-ring {
+      width: 64px; height: 64px;
+      border: 3px solid rgba(0, 229, 255, 0.15);
+      border-top-color: var(--neon-cyan);
+      border-radius: 50%;
+      margin: 0 auto 1.5rem;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-title {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+      margin-bottom: 0.5rem;
+    }
+    .progress-bar {
+      height: 4px;
+      background: rgba(0, 229, 255, 0.15);
+      border-radius: 2px;
+      margin-top: 1.25rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 72%;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--bio-green));
+      border-radius: 2px;
+      animation: progress 2s ease-in-out infinite alternate;
+    }
+    @keyframes progress {
+      0% { width: 40%; }
+      100% { width: 88%; }
+    }
+
+    @media (max-width: 900px) {
+      .metrics-row { grid-template-columns: repeat(2, 1fr); }
+      .dash-grid, .session-grid { grid-template-columns: 1fr; }
+      .sidebar { width: 60px; }
+      .sidebar-brand, .nav-item span { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Demo navigation (preview only) -->
+  <nav class="demo-bar" aria-label="Design demo page switcher">
+    <span>DESIGN DEMO</span>
+    <button class="demo-tab active" data-page="login">1 · Access Gate</button>
+    <button class="demo-tab" data-page="dashboard">2 · Command Center</button>
+    <button class="demo-tab" data-page="patients">3 · Patients Registry</button>
+    <button class="demo-tab" data-page="profile">4 · Neural Profile</button>
+    <button class="demo-tab" data-page="session">5 · Session Matrix</button>
+    <button class="demo-tab" data-page="callback">5b · Callback</button>
+  </nav>
+
+  <div class="bg-layer" aria-hidden="true">
+    <div class="bg-mesh"></div>
+    <div class="bg-grid"></div>
+    <div class="scanline"></div>
+  </div>
+
+  <!-- ═══ PAGE 1: LOGIN ═══ -->
+  <section id="page-login" class="page active" aria-label="Access Gate login preview">
+    <div class="login-card hud-corners">
+      <div class="login-logo">
+        <div class="logo-mark">NA</div>
+        <div>
+          <div class="login-title">NEURAL COMMAND ACCESS</div>
+          <div class="login-sub">Pediatric neurorehabilitation CDS</div>
+        </div>
+      </div>
+      <div class="login-divider"></div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;">
+        Secure clinical interface for authorized personnel. Authenticate via organization SSO.
+      </p>
+      <button class="btn-primary" type="button">&#9654;&nbsp; INITIATE SSO SESSION</button>
+      <p class="login-footer">Secured via Keycloak &middot; v0.1.0 Pioneer</p>
+    </div>
+  </section>
+
+  <!-- ═══ PAGE 2: DASHBOARD ═══ -->
+  <section id="page-dashboard" class="page" aria-label="Command Center preview">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">NEUROATLAS</div>
+        <div class="nav-item active"><span>Command Center</span></div>
+        <div class="nav-item"><span>Patients Registry</span></div>
+        <div class="nav-item"><span>Session Matrix</span></div>
+      </aside>
+      <div class="main-area">
+        <header class="topbar">
+          <span class="topbar-title">COMMAND CENTER</span>
+          <div class="topbar-user">
+            <span class="role-chip">CLINICIAN</span>
+            <span>dr.sokolov@clinic.org</span>
+            <button class="btn-ghost" type="button">Sign out</button>
+          </div>
+        </header>
+        <div class="content">
+          <p style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);margin-bottom:1.25rem;">
+            Good morning &middot; Session active &middot; 2026-07-07 11:44 UTC+3
+          </p>
+          <div class="metrics-row">
+            <div class="metric-tile"><div class="value">24</div><div class="label">Total Patients</div></div>
+            <div class="metric-tile"><div class="value">12</div><div class="label">Assessments / Week</div></div>
+            <div class="metric-tile"><div class="value" style="color:var(--warn-amber)">3</div><div class="label">Pending Predictions</div></div>
+            <div class="metric-tile"><div class="value" style="color:var(--bio-green);font-size:1.2rem">OK</div><div class="label">System Health</div></div>
+          </div>
+          <div class="dash-grid">
+            <div class="panel">
+              <h3>Recent Activity</h3>
+              <div class="activity-row"><span><code>pat_01K2J3M4N5P6</code> registered</span><span style="color:var(--text-muted);font-size:0.75rem">2h ago</span></div>
+              <div class="activity-row"><span><code>pat_01J8X2Y4Z6W1</code> assessment added</span><span style="color:var(--text-muted);font-size:0.75rem">5h ago</span></div>
+              <div class="activity-row"><span><code>pat_01H5A3B7C9D2</code> profile updated</span><span style="color:var(--text-muted);font-size:0.75rem">1d ago</span></div>
+            </div>
+            <div class="panel">
+              <h3>Neural Mesh</h3>
+              <div class="neural-viz">
+                <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="100" cy="60" r="4" fill="#00e5ff" opacity="0.9"/>
+                  <circle cx="60" cy="30" r="3" fill="#00e5ff" opacity="0.6"/>
+                  <circle cx="140" cy="30" r="3" fill="#ff2bd6" opacity="0.6"/>
+                  <circle cx="40" cy="80" r="3" fill="#39ff88" opacity="0.5"/>
+                  <circle cx="160" cy="80" r="3" fill="#39ff88" opacity="0.5"/>
+                  <circle cx="100" cy="100" r="3" fill="#00e5ff" opacity="0.5"/>
+                  <line x1="100" y1="60" x2="60" y2="30" stroke="#00e5ff" stroke-width="0.5" opacity="0.4"/>
+                  <line x1="100" y1="60" x2="140" y2="30" stroke="#ff2bd6" stroke-width="0.5" opacity="0.4"/>
+                  <line x1="100" y1="60" x2="40" y2="80" stroke="#39ff88" stroke-width="0.5" opacity="0.3"/>
+                  <line x1="100" y1="60" x2="160" y2="80" stroke="#39ff88" stroke-width="0.5" opacity="0.3"/>
+                  <line x1="100" y1="60" x2="100" y2="100" stroke="#00e5ff" stroke-width="0.5" opacity="0.3"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PAGE 3: PATIENTS ═══ -->
+  <section id="page-patients" class="page" aria-label="Patients Registry preview">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">NEUROATLAS</div>
+        <div class="nav-item"><span>Command Center</span></div>
+        <div class="nav-item active"><span>Patients Registry</span></div>
+        <div class="nav-item"><span>Session Matrix</span></div>
+      </aside>
+      <div class="main-area">
+        <header class="topbar">
+          <span class="topbar-title">PATIENTS REGISTRY</span>
+          <div class="topbar-user">
+            <span class="role-chip">CLINICIAN</span>
+            <span>dr.sokolov@clinic.org</span>
+          </div>
+        </header>
+        <div class="content">
+          <div class="toolbar">
+            <input class="search-input" type="search" placeholder="Search by ID or diagnosis code..." readonly />
+            <span class="filter-chip active">All</span>
+            <span class="filter-chip">Active</span>
+            <span class="filter-chip">Review</span>
+            <button class="btn-ghost" type="button" style="margin-left:auto;color:var(--neon-cyan);border-color:var(--neon-cyan)">+ Register</button>
+          </div>
+          <div class="panel" style="padding:0;overflow:hidden">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Patient ID</th>
+                  <th>Year of Birth</th>
+                  <th>Sex</th>
+                  <th>Diagnosis</th>
+                  <th>Registered</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>pat_01K2J3M4N5P6Q7</code></td>
+                  <td>2019</td><td>M</td><td>G80.9</td>
+                  <td style="font-family:var(--font-mono);font-size:0.78rem">2026-07-01</td>
+                  <td><span class="status-dot green"></span>Active</td>
+                </tr>
+                <tr>
+                  <td><code>pat_01J8X2Y4Z6W1A3</code></td>
+                  <td>2017</td><td>F</td><td>&mdash;</td>
+                  <td style="font-family:var(--font-mono);font-size:0.78rem">2026-06-28</td>
+                  <td><span class="status-dot amber"></span>Review</td>
+                </tr>
+                <tr>
+                  <td><code>pat_01H5A3B7C9D2E4</code></td>
+                  <td>2020</td><td>M</td><td>G93.1</td>
+                  <td style="font-family:var(--font-mono);font-size:0.78rem">2026-06-15</td>
+                  <td><span class="status-dot green"></span>Active</td>
+                </tr>
+                <tr>
+                  <td><code>pat_01G9F2H4J6K8L0</code></td>
+                  <td>2018</td><td>F</td><td>G80.0</td>
+                  <td style="font-family:var(--font-mono);font-size:0.78rem">2026-06-02</td>
+                  <td><span class="status-dot green"></span>Active</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PAGE 4: PATIENT PROFILE ═══ -->
+  <section id="page-profile" class="page" aria-label="Neural Profile preview">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">NEUROATLAS</div>
+        <div class="nav-item"><span>Command Center</span></div>
+        <div class="nav-item active"><span>Patients Registry</span></div>
+        <div class="nav-item"><span>Session Matrix</span></div>
+      </aside>
+      <div class="main-area">
+        <header class="topbar">
+          <span class="topbar-title">NEURAL PROFILE</span>
+          <div class="topbar-user">
+            <span class="role-chip">CLINICIAN</span>
+          </div>
+        </header>
+        <div class="content">
+          <div class="profile-hero">
+            <div class="profile-id">pat_01K2J3M4N5P6Q7</div>
+            <div class="profile-meta">Born 2019 &middot; Male &middot; Diagnosis G80.9 (Cerebral palsy, unspecified)</div>
+          </div>
+          <div class="tab-strip">
+            <div class="tab active">Overview</div>
+            <div class="tab">Assessments</div>
+            <div class="tab locked">Predictions (Phase 2)</div>
+          </div>
+          <div class="panel">
+            <h3>Clinical Summary</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem">
+              Registered 2026-07-01 &middot; 0 assessments recorded &middot; No ML predictions yet
+            </p>
+            <div class="sparkline" aria-hidden="true"></div>
+            <p style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted)">
+              Recovery trajectory placeholder &mdash; live data in Phase 2
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PAGE 5: SESSION ═══ -->
+  <section id="page-session" class="page" aria-label="Session Matrix preview">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">NEUROATLAS</div>
+        <div class="nav-item"><span>Command Center</span></div>
+        <div class="nav-item"><span>Patients Registry</span></div>
+        <div class="nav-item active"><span>Session Matrix</span></div>
+      </aside>
+      <div class="main-area">
+        <header class="topbar">
+          <span class="topbar-title">SESSION MATRIX</span>
+          <div class="topbar-user">
+            <span class="role-chip admin">ADMIN</span>
+            <span>admin@neuroatlas.dev</span>
+          </div>
+        </header>
+        <div class="content">
+          <div class="session-grid">
+            <div class="panel identity-card">
+              <h3>Identity</h3>
+              <div class="email">admin@neuroatlas.dev</div>
+              <div class="uid">usr_01K9M2N4P6Q8R0</div>
+              <div style="margin-top:1rem;display:flex;gap:0.5rem">
+                <span class="role-chip admin">ADMIN</span>
+                <span class="role-chip">CLINICIAN</span>
+              </div>
+              <div style="margin-top:1.5rem;display:flex;gap:0.75rem">
+                <button class="btn-ghost" type="button">Refresh session</button>
+                <button class="btn-ghost" type="button" style="border-color:var(--alert-red);color:var(--alert-red)">Sign out</button>
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Access Matrix</h3>
+              <table class="data-table access-matrix">
+                <thead>
+                  <tr><th>Route</th><th>clinician</th><th>admin</th><th>researcher</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>/dashboard</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="cross">&mdash;</td></tr>
+                  <tr><td>/patients</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="cross">&mdash;</td></tr>
+                  <tr><td>/session</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td></tr>
+                  <tr><td>/ml</td><td class="cross">&mdash;</td><td class="check">&#10003;</td><td class="cross">&mdash;</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PAGE 5b: CALLBACK LOADER ═══ -->
+  <section id="page-callback" class="page" aria-label="Auth callback loader preview">
+    <div class="loader-card hud-corners">
+      <div class="loader-ring" aria-hidden="true"></div>
+      <div class="loader-title">SYNCHRONIZING SESSION</div>
+      <p style="font-size:0.85rem;color:var(--text-muted)">Verifying neural link with Keycloak...</p>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+      <p style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);margin-top:0.75rem">72%</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll(".demo-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const page = btn.dataset.page;
+        document.querySelectorAll(".demo-tab").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
+        btn.classList.add("active");
+        const el = document.getElementById("page-" + page);
+        if (el) el.classList.add("active");
+      });
+    });
+  </script>
+</body>
+</html>
