@@ -28,7 +28,7 @@ async def start_auth(
     redirect_uri = dependencies.redirect_uri_for_request(request)
 
     auth_url = build_authorize_url(
-        keycloak_base=settings.keycloak_url,
+        keycloak_base=settings.keycloak_browser_url,
         realm=settings.keycloak_realm,
         client_id=settings.keycloak_client_id,
         redirect_uri=redirect_uri,

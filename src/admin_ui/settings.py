@@ -12,6 +12,7 @@ class AdminUiSettings(Settings):
     frontend_dir: str = os.getenv("FRONTEND_DIR", "frontend")
 
     keycloak_url: str = os.getenv("KEYCLOAK_URL", "http://localhost:8080")
+    keycloak_browser_url: str = os.getenv("KEYCLOAK_BROWSER_URL", "")
     keycloak_realm: str = os.getenv("KEYCLOAK_REALM", "neuroatlas")
     keycloak_client_id: str = os.getenv("KEYCLOAK_UI_CLIENT_ID", "neuroatlas-ui")
     keycloak_client_secret: str = os.getenv("KEYCLOAK_UI_CLIENT_SECRET", "")
@@ -36,6 +37,8 @@ class AdminUiSettings(Settings):
     service_map: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        if not self.keycloak_browser_url:
+            self.keycloak_browser_url = self.keycloak_url
         if not self.service_map:
             self.service_map = {
                 "/guard/api/v1/patients": self.patients_route,
