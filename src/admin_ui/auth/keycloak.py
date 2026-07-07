@@ -17,10 +17,10 @@ class KeycloakOidcClient:
         self._settings = settings
         self._http = http_client
         self._token_url = (
-            f"{settings.keycloak_url.rstrip('/')}/realms/{settings.keycloak_realm}" "/protocol/openid-connect/token"
+            f"{settings.keycloak_url.rstrip('/')}/realms/{settings.keycloak_realm}/protocol/openid-connect/token"
         )
         self._logout_url = (
-            f"{settings.keycloak_url.rstrip('/')}/realms/{settings.keycloak_realm}" "/protocol/openid-connect/logout"
+            f"{settings.keycloak_url.rstrip('/')}/realms/{settings.keycloak_realm}/protocol/openid-connect/logout"
         )
 
     @property

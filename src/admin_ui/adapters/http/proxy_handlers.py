@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 from fastapi import APIRouter, Request
 from starlette.responses import Response as StarletteResponse
@@ -31,7 +33,7 @@ _FORWARD_REQUEST_HEADERS = frozenset(
 _CORRELATION_HEADERS = ("correlation-id", "x-correlation-id")
 
 
-def _correlation_id(request: Request) -> str:
+def _correlation_id(request: Request) -> Any:
     for header in _CORRELATION_HEADERS:
         value = request.headers.get(header)
         if value:
