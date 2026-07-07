@@ -6,10 +6,12 @@ networks:
 
 volumes:
   pg_data:
+  keycloak_data:
 
 services:
   kafka:
-    image: bitnami/kafka:3.7
+    # bitnami/kafka tags were removed from Docker Hub; legacy mirror keeps the same env vars.
+    image: bitnamilegacy/kafka:3.7.1
     container_name: kafka_neuroatlas
     restart: always
     hostname: kafka
@@ -34,12 +36,15 @@ services:
       start_period: 20s
 
   kafka-init:
-    image: bitnami/kafka:3.7
+    image: python:3.12-slim
     container_name: kafka_init_neuroatlas
     depends_on:
       kafka:
         condition: service_healthy
-    entrypoint: ["python3", "/scripts/init_topics.py"]
+    command:
+      - /bin/sh
+      - -c
+      - pip install -q --no-cache-dir aiokafka python-ulid && python /scripts/init_topics.py
     volumes:
       - ./kafka/init_topics.py:/scripts/init_topics.py:ro
       - ../src:/app/src:ro
@@ -71,3 +76,28 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+
+  keycloak:
+    profiles: [storage]
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak
+    restart: always
+    # Persist realm data across container recreates; import neuroatlas on first start.
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HTTP_PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+    networks:
+      - neuroatlasnet
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s

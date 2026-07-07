@@ -27,6 +27,7 @@ class RegisterPatient(Command):
         date_of_birth_year: int
         sex: str | None = None
         diagnosis_code: str | None = None
+        user_id: str | None = None
 
         def validate_context(self) -> None:
             """Validate the registration payload."""
@@ -51,7 +52,7 @@ class RegisterPatient(Command):
         )
         async with self.uow:
             await self.uow.patients.create(patient)
-        await logger.ainfo("Patient registered.", patient_id=patient.id)
+        await logger.ainfo("Patient registered.", patient_id=patient.id, user_id=self.ctx.user_id)
         return CommandResult(data=patient.id)
 
 
@@ -67,6 +68,7 @@ class RecordAssessment(Command):
         value: float | str
         body_site: str | None = None
         meta: dict = field(default_factory=dict)
+        user_id: str | None = None
 
         def validate_context(self) -> None:
             """Validate the assessment payload against scale ranges."""
@@ -102,5 +104,10 @@ class RecordAssessment(Command):
             if not await self.uow.patients.find_by_id(self.ctx.patient_id):
                 raise ContextValidationError("Unknown patient.", field_name="patient_id")
             await self.uow.assessments.create(assessment)
-        await logger.ainfo("Assessment recorded.", assessment_id=assessment.id, type=assessment.type)
+        await logger.ainfo(
+            "Assessment recorded.",
+            assessment_id=assessment.id,
+            type=assessment.type,
+            user_id=self.ctx.user_id,
+        )
         return CommandResult(data=assessment.id)

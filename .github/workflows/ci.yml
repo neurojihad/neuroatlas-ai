@@ -1,0 +1,276 @@
+# NeuroAtlas CI — GitHub Actions (replaces .gitlab-ci.yml).
+# Quality gates: fmt_check, lint, test, sast, pip_audit, migrations; Docker builds on master.
+
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-*"
+  pull_request:
+    branches: [master, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BASE_IMAGE: python:3.12-slim-bookworm
+  RUNNER_IMAGE: python:3.12-slim-bookworm
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install make
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends make && rm -rf /var/lib/apt/lists/*
+      - uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - run: poetry install --only main,dev --no-root
+      - run: make fmt_check
+      - run: make lint
+
+  unit:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install make
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends make && rm -rf /var/lib/apt/lists/*
+      - uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - run: poetry install --only main,dev,test,patients,housekeeper,ml,messaging --no-root
+      - run: make test_in_ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: |
+            coverage.xml
+            reports/
+          retention-days: 7
+
+  sast:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install make
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends make && rm -rf /var/lib/apt/lists/*
+      - uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - run: poetry install --only main,dev --no-root
+      - run: make sast
+
+  audit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: python:3.12-slim-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install make
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends make && rm -rf /var/lib/apt/lists/*
+      - uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - run: poetry install --only main,dev --no-root
+      - name: pip audit (informational)
+        continue-on-error: true
+        run: poetry run pip-audit --local
+
+  migrations:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim-bookworm
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: neuroatlas
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: neuroatlas
+        ports:
+          - 5432:5432
+    env:
+      POSTGRES_URI: postgresql+asyncpg://neuroatlas:password@postgres:5432/neuroatlas
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install make
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends make && rm -rf /var/lib/apt/lists/*
+      - uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: Install dependencies
+        run: |
+          for attempt in 1 2 3; do
+            poetry install --only main,housekeeper --no-root && exit 0
+            echo "poetry install failed (attempt ${attempt}/3), retrying..."
+            sleep 15
+          done
+          exit 1
+      - run: make migrate
+      - run: make check_migrations
+
+  changes:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    outputs:
+      patients: ${{ steps.filter.outputs.patients }}
+      ml: ${{ steps.filter.outputs.ml }}
+      housekeeper: ${{ steps.filter.outputs.housekeeper }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            patients:
+              - 'src/common/**'
+              - 'src/patients/**'
+              - 'pyproject.toml'
+              - 'poetry.lock'
+            ml:
+              - 'src/common/**'
+              - 'src/ml/**'
+              - 'pyproject.toml'
+              - 'poetry.lock'
+            housekeeper:
+              - 'src/common/**'
+              - 'src/housekeeper/**'
+              - 'alembic.ini'
+              - 'pyproject.toml'
+              - 'poetry.lock'
+
+  build-patients:
+    needs: [check, sast, audit, unit, migrations, changes]
+    if: |
+      always() &&
+      needs.check.result == 'success' &&
+      needs.sast.result == 'success' &&
+      needs.unit.result == 'success' &&
+      needs.migrations.result == 'success' &&
+      (needs.audit.result == 'success' || needs.audit.result == 'failure' || needs.audit.result == 'skipped') &&
+      (startsWith(github.ref, 'refs/tags/') ||
+        (needs.changes.result == 'success' && needs.changes.outputs.patients == 'true'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set image tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "IMAGE_TAG=${GITHUB_REF_NAME}-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          fi
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/patients/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/patients:${{ env.IMAGE_TAG }}
+          build-args: BASE_IMAGE=${{ env.BASE_IMAGE }}
+
+  build-ml:
+    needs: [check, sast, audit, unit, migrations, changes]
+    if: |
+      always() &&
+      needs.check.result == 'success' &&
+      needs.sast.result == 'success' &&
+      needs.unit.result == 'success' &&
+      needs.migrations.result == 'success' &&
+      (needs.audit.result == 'success' || needs.audit.result == 'failure' || needs.audit.result == 'skipped') &&
+      (startsWith(github.ref, 'refs/tags/') ||
+        (needs.changes.result == 'success' && needs.changes.outputs.ml == 'true'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set image tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "IMAGE_TAG=${GITHUB_REF_NAME}-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          fi
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/ml/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/ml:${{ env.IMAGE_TAG }}
+          build-args: BASE_IMAGE=${{ env.BASE_IMAGE }}
+
+  build-housekeeper:
+    needs: [check, sast, audit, unit, migrations, changes]
+    if: |
+      always() &&
+      needs.check.result == 'success' &&
+      needs.sast.result == 'success' &&
+      needs.unit.result == 'success' &&
+      needs.migrations.result == 'success' &&
+      (needs.audit.result == 'success' || needs.audit.result == 'failure' || needs.audit.result == 'skipped') &&
+      (startsWith(github.ref, 'refs/tags/') ||
+        (needs.changes.result == 'success' && needs.changes.outputs.housekeeper == 'true'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set image tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "IMAGE_TAG=${GITHUB_REF_NAME}-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          fi
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/housekeeper/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/housekeeper:${{ env.IMAGE_TAG }}
+          build-args: BASE_IMAGE=${{ env.BASE_IMAGE }}

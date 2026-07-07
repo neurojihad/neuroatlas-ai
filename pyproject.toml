@@ -6,7 +6,8 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
-fastapi = "~0.116.0"
+fastapi = "^0.135.0"
+starlette = ">=1.0.1"
 uvicorn = "^0.29.0"
 structlog = "^24.1.0"
 python-ulid = "^2.5.0"
@@ -14,6 +15,7 @@ orjson = "^3.10.15"
 httpx = "^0.27.0"
 prometheus-client = "^0.20.0"
 reportlab = "^5.0.0"
+PyJWT = { extras = ["crypto"], version = "^2.8.0" }
 
 [tool.poetry.group.patients.dependencies]
 asyncpg = "^0.29.0"
@@ -84,6 +86,8 @@ max-complexity = 10
 
 [tool.mypy]
 python_version = "3.12"
+mypy_path = "src"
+explicit_package_bases = true
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true

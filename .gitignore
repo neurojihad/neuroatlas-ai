@@ -16,11 +16,12 @@ reports/
 
 # Env / secrets
 infra/.env
+infra/.env.example
 .env
 
 # ML artifacts / data (track via DVC, not git)
 data/
-models/
+/models/
 *.pkl
 *.joblib
 
@@ -29,3 +30,6 @@ models/
 
 # Private data
 docs/private/
+
+# Auto-generated MR description (refreshed on git push)
+MR_BODY.md

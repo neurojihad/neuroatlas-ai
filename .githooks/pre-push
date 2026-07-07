@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Refresh MR description files before every push, then stage them for visibility in git.
+set -uo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT" || exit 0
+
+run_generate() {
+  if command -v poetry >/dev/null 2>&1; then
+    poetry run python scripts/generate_mr_body.py
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 scripts/generate_mr_body.py
+  elif command -v python >/dev/null 2>&1; then
+    python scripts/generate_mr_body.py
+  else
+    return 0
+  fi
+}
+
+run_generate || true
+
+for path in MR_BODY.md .github/pull_request_template.md; do
+  if [[ -f "$path" ]]; then
+    git add "$path" 2>/dev/null || true
+  fi
+done
+
+exit 0

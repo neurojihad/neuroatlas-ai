@@ -4,6 +4,12 @@
     "afterFileEdit": [
       { "command": "make lint_fix" }
     ],
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/pre-push-mr-body.sh",
+        "matcher": "git push"
+      }
+    ],
     "stop": [
       { "command": "make lint" }
     ]

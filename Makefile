@@ -1,3 +1,9 @@
+# Linux/macOS/CI: use GNU make (e.g. `make up_infra`).
+# Windows PowerShell: do NOT paste $(COMPOSE_*) lines into the shell — use:
+#   .\make.ps1 up_infra
+#   make.cmd up_infra
+# See make.ps1 for the full target list.
+
 -include infra/.env
 export
 
@@ -14,9 +20,21 @@ install_ml:
 
 init:
 	@test -f infra/.env || cp infra/.env.example infra/.env
+	@$(MAKE) setup_hooks
+
+setup_hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-push .cursor/hooks/pre-push-mr-body.sh 2>/dev/null || true
+	@echo "Git hooks installed (.githooks/pre-push refreshes MR_BODY.md + Default.md on push)."
+
+mr_body:
+	poetry run python scripts/generate_mr_body.py
 
 # Run services locally (in-memory adapters, no infra required)
 # Local and compose targets load variables from infra/.env (see -include above).
+
+run_admin_ui:
+	poetry run uvicorn admin_ui.main:app --host 0.0.0.0 --port 8000 --reload
 
 run_patients:
 	poetry run uvicorn patients.main:app --host 0.0.0.0 --port 8001 --reload
@@ -44,13 +62,13 @@ up: up_infra up_app
 down: down_app down_infra
 
 up_infra:
-	$(COMPOSE_INFRA) up -d
+	$(COMPOSE_INFRA) --profile storage up -d
 
 down_infra:
-	$(COMPOSE_INFRA) down
+	$(COMPOSE_INFRA) --profile storage down
 
 kafka_topics:
-	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run python infra/kafka/init_topics.py
+	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run --with messaging python infra/kafka/init_topics.py
 
 kafka_logs:
 	docker logs -f kafka_neuroatlas
@@ -107,6 +125,9 @@ check: fmt lint test
 test:
 	poetry run pytest src
 
+test_admin_ui:
+	poetry run pytest src/admin_ui --cov=src/admin_ui
+
 test_patients:
 	poetry run pytest src/patients --cov=src/patients
 
@@ -130,7 +151,7 @@ test_in_ci:
 		-n auto
 
 pip_audit:
-	poetry run pip-audit
+	poetry run pip-audit --local
 
 # Migrations (all run through Housekeeper; requires Postgres — run `make up_infra` first)
 

@@ -31,8 +31,31 @@ class InvalidOperation(DomainError):
     status_code = 409
 
 
+class Unauthorized(DomainError):
+    """Missing or invalid credentials."""
+
+    status_code = 401
+
+
+class Forbidden(DomainError):
+    """Authenticated caller lacks permission for the requested action."""
+
+    status_code = 403
+
+
 class BusException(Exception):
     """Raised when the event bus adapter fails."""
+
+    def __init__(self, message: str, details: str | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.details = details
+
+
+class AuthException(Exception):
+    """Raised when the auth adapter fails to validate a token."""
+
+    status_code = 401
 
     def __init__(self, message: str, details: str | None = None) -> None:
         super().__init__(message)
