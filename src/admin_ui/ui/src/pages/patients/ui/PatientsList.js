@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { usePatientsQuery } from "./queries/patients";
+import { usePatientsQuery } from "../queries/patients";
 
 const formatDate = (value) => {
   const date = new Date(value);

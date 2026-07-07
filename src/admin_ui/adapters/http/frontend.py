@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
@@ -11,12 +12,14 @@ from starlette.staticfiles import StaticFiles
 
 from admin_ui.settings import AdminUiSettings
 
-_ENV_SCRIPT_MARKER = "<script>window._env_ = {};</script>"
+_ENV_SCRIPT_PATTERN = re.compile(
+    r"<script>\s*window\._env_\s*=\s*\{\s*\}\s*;?\s*</script>",
+    re.IGNORECASE,
+)
 _RESERVED_PATH_PREFIXES = (
     "/api/",
     "/guard/",
     "/health",
-    "/static/",
     "/docs",
     "/openapi.json",
     "/redoc",
@@ -55,9 +58,9 @@ def render_index(settings: AdminUiSettings) -> str:
 
     template = index_path.read_text(encoding="utf-8")
     env_script = f"<script>window._env_ = {json.dumps(build_runtime_env(settings))};</script>"
-    if _ENV_SCRIPT_MARKER not in template:
+    if not _ENV_SCRIPT_PATTERN.search(template):
         raise HTTPException(status_code=500, detail="index.html missing window._env_ placeholder")
-    return template.replace(_ENV_SCRIPT_MARKER, env_script, 1)
+    return _ENV_SCRIPT_PATTERN.sub(env_script, template, count=1)
 
 
 def _is_reserved_path(path: str) -> bool:
