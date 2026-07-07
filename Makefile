@@ -74,10 +74,17 @@ kafka_logs:
 	docker logs -f kafka_neuroatlas
 
 up_app:
+	@echo "Browser entry: http://localhost:8000 (Keycloak: make up_infra first)"
 	$(COMPOSE_APP) up -d --build
 
 down_app:
 	$(COMPOSE_APP) down
+
+up_admin:
+	$(COMPOSE_APP) up -d --build admin_ui
+
+down_admin:
+	$(COMPOSE_APP) stop admin_ui
 
 up_pat:
 	$(COMPOSE_APP) up -d --build patients

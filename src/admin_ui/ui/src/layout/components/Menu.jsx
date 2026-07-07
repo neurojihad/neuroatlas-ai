@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
 
-import { hasAnyRole } from "../shared/constants/roles";
-import { menuItems } from "../shared/constants/menu";
-import { useAuth } from "../shared/hooks/useAuth";
+import { hasAnyRole } from "../../shared/constants/roles";
+import { menuItems } from "../../shared/constants/menu";
+import { useAuth } from "../../shared/hooks/useAuth";
 
 export const Menu = () => {
   const { user } = useAuth();

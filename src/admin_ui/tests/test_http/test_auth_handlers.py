@@ -5,7 +5,7 @@ from httpx import ASGITransport, AsyncClient
 
 from admin_ui.auth.session import PkceStore, split_jwt
 from admin_ui.main import app
-from admin_ui.settings import settings
+from admin_ui.settings import AdminUiSettings, settings
 from admin_ui.tests.fakes import (
     DEFAULT_ACCESS_TOKEN,
     ExpiringAuthManager,
@@ -40,6 +40,22 @@ async def test_start_auth_returns_authorize_url():
     assert "code_challenge=" in auth_url
     assert "code_challenge_method=S256" in auth_url
     assert "client_id=neuroatlas-ui" in auth_url
+
+
+@pytest.mark.asyncio
+async def test_start_auth_uses_keycloak_browser_url():
+    docker_settings = AdminUiSettings(
+        keycloak_url="http://keycloak:8080",
+        keycloak_browser_url="http://localhost:8080",
+    )
+    async with app.router.lifespan_context(app):
+        app.state.settings = docker_settings
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://localhost") as client:
+            response = await client.get("/api/v1/auth")
+    assert response.status_code == 200
+    auth_url = response.json()["data"]["auth_url"]
+    assert auth_url.startswith("http://localhost:8080/")
 
 
 @pytest.mark.asyncio

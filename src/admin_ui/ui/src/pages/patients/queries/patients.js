@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { httpPatientsApi } from "../../shared/api/httpPatientsApi";
+import { httpPatientsApi } from "../../../shared/api/httpPatientsApi";
 
 export const patientsKeys = {
   all: ["patients"],

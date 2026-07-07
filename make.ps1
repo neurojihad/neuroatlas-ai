@@ -192,8 +192,9 @@ Infra / Docker:
   .\make.ps1 init              copy infra/.env.example to infra/.env
   .\make.ps1 up_infra          Postgres + Kafka + Keycloak
   .\make.ps1 down_infra
-  .\make.ps1 up_app            build and start app services
+  .\make.ps1 up_app            build and start app services (browser: http://localhost:8000)
   .\make.ps1 down_app
+  .\make.ps1 up_admin / down_admin
   .\make.ps1 up                up_infra then up_app
   .\make.ps1 down              down_app then down_infra
   .\make.ps1 up_pat / down_pat / up_ml / down_ml / up_hk / down_hk
@@ -278,11 +279,20 @@ Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
     }
 
     "up_app" {
+        Write-Step "Browser entry: http://localhost:8000 (Keycloak: run up_infra first)"
         Invoke-Compose @("up", "-d", "--build")
     }
 
     "down_app" {
         Invoke-Compose @("down")
+    }
+
+    "up_admin" {
+        Invoke-Compose @("up", "-d", "--build", "admin_ui")
+    }
+
+    "down_admin" {
+        Invoke-Compose @("stop", "admin_ui")
     }
 
     "up" {

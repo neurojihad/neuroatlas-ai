@@ -19,6 +19,12 @@ x-common-env: &common-env
   HOUSEKEEPER_ROUTE: ${HOUSEKEEPER_ROUTE:-housekeeper:8000}
   KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_DOCKER_BOOTSTRAP_SERVERS:-kafka:9092}
 
+x-admin-ui-env: &admin-ui-env
+  KEYCLOAK_URL: ${KEYCLOAK_DOCKER_URL:-http://keycloak:8080}
+  KEYCLOAK_BROWSER_URL: ${KEYCLOAK_BROWSER_URL:-http://localhost:8080}
+  OIDC_JWKS_URL: ${OIDC_DOCKER_JWKS_URL:-http://keycloak:8080/realms/neuroatlas/protocol/openid-connect/certs}
+  OIDC_ISSUER: ${OIDC_DOCKER_ISSUER:-http://localhost:8080/realms/neuroatlas}
+
 networks:
   neuroatlasnet:
     name: neuroatlasnet
@@ -79,4 +85,25 @@ services:
       - "8003:8000"
     networks:
       - neuroatlasnet
+    healthcheck: *healthcheck
+
+  admin_ui:
+    <<: *app-env-file
+    image: admin_ui:local
+    container_name: admin_ui
+    restart: always
+    build:
+      context: ../.
+      dockerfile: src/admin_ui/Dockerfile
+    hostname: admin_ui
+    environment:
+      <<: [*common-env, *admin-ui-env]
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+    ports:
+      - "8000:8000"
+    networks:
+      - neuroatlasnet
+    depends_on:
+      patients:
+        condition: service_healthy
     healthcheck: *healthcheck
