@@ -127,17 +127,36 @@ function Invoke-PoetryRun {
         return
     }
 
-    $venvPython = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
-    if (Test-Path $venvPython) {
-        if ($Command.Length -gt 0 -and $Command[0] -eq "python") {
-            $Command = $Command[1..($Command.Length - 1)]
-        }
-        & $venvPython @Command
+    $venvScripts = Join-Path $PSScriptRoot ".venv\Scripts"
+    $venvPython = Join-Path $venvScripts "python.exe"
+    if (-not (Test-Path $venvPython)) {
+        throw "Poetry or .venv not found. Run: .\make.ps1 install"
+    }
+
+    # poetry run --with <group> python ... (venv fallback: dev deps should already be installed)
+    if ($Command.Length -ge 3 -and $Command[0] -eq "--with") {
+        $Command = @($Command[2..($Command.Length - 1)])
+    }
+
+    if ($Command.Length -gt 0 -and $Command[0] -eq "python") {
+        & $venvPython @($Command[1..($Command.Length - 1)])
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         return
     }
 
-    throw "Poetry or .venv not found. Run: .\make.ps1 install"
+    if ($Command.Length -eq 0) {
+        throw "Invoke-PoetryRun: empty command"
+    }
+
+    $toolExe = Join-Path $venvScripts "$($Command[0]).exe"
+    if (Test-Path $toolExe) {
+        & $toolExe @($Command[1..($Command.Length - 1)])
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        return
+    }
+
+    & $venvPython -m @Command
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
 function Invoke-Compose {
@@ -194,6 +213,9 @@ DB:
 Quality:
   .\make.ps1 test / lint / fmt / check / sast
 
+Windows / PyCharm (once):
+  .\make.ps1 setup_make       install make into .venv (then: make fmt in new terminal)
+
 Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
 '@
     }
@@ -205,6 +227,11 @@ Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
             Copy-Item $examplePath $envPath
         }
         & $PSCommandPath setup_hooks
+        & $PSCommandPath setup_make
+    }
+
+    "setup_make" {
+        & (Join-Path $PSScriptRoot "scripts\dev\setup-pycharm-make.ps1")
     }
 
     "setup_hooks" {
@@ -219,6 +246,7 @@ Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
     "install" {
         pip install poetry
         poetry install
+        & (Join-Path $PSScriptRoot "scripts\dev\install-venv-make.ps1")
     }
 
     "install_ml" {

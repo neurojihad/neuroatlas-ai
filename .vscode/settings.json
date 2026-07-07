@@ -1,0 +1,17 @@
+{
+  "terminal.integrated.env.windows": {
+    "PATH": "${workspaceFolder};${env:PATH}"
+  },
+  "terminal.integrated.profiles.windows": {
+    "NeuroAtlas": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell",
+      "args": [
+        "-NoExit",
+        "-Command",
+        "function global:make { param([Parameter(ValueFromRemainingArguments=$true)]$args); $dir = $PWD.Path; while ($dir) { $shim = Join-Path $dir 'make.cmd'; if (Test-Path $shim) { & $shim @args; return $LASTEXITCODE }; $parent = Split-Path $dir -Parent; if (-not $parent -or $parent -eq $dir) { break }; $dir = $parent }; Write-Error 'make.cmd not found — cd to repo root or use .\\make.cmd' }"
+      ]
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "NeuroAtlas"
+}
