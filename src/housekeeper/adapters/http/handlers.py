@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from common.http.schemas import ListResponseSchema, ResponseSchema
+from common.adapters.http.schemas import ListResponseSchema, ResponseSchema
 from housekeeper.adapters.http import dependencies
 from housekeeper.adapters.http.schemas import (
     DatabaseHealthSchema,
