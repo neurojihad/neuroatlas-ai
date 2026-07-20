@@ -2,7 +2,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from common.application.logging import logger
-from common.core.exceptions import AuthException, ContextValidationError, DatabaseException, DomainError
+from common.core.exceptions import (
+    AuthException,
+    ContextValidationError,
+    DatabaseException,
+    DomainError,
+)
 
 
 def register_exception_handlers(app: FastAPI) -> None:

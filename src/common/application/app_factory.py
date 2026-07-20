@@ -4,8 +4,8 @@ from contextlib import AbstractAsyncContextManager
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from common.application.settings import Settings
 from common.application.error_handlers import register_exception_handlers
+from common.application.settings import Settings
 
 
 def create(

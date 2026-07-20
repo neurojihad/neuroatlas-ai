@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from common.core.exceptions import DatabaseException
 from common.application.error_handlers import register_exception_handlers
+from common.core.exceptions import DatabaseException
 
 _INTERNAL_DETAILS = "psycopg: connection refused"
 

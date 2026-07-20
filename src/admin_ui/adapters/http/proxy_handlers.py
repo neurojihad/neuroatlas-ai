@@ -11,8 +11,8 @@ from starlette.responses import Response as StarletteResponse
 from admin_ui.adapters.http import dependencies
 from admin_ui.adapters.http.proxy import resolve_upstream_url
 from admin_ui.settings import AdminUiSettings
-from common.application.logging import logger
 from common.adapters.http.schemas import ErrorSchema
+from common.application.logging import logger
 from common.utils.identifiers import generate_id_for
 
 router_guard = APIRouter(tags=["guard-proxy"])
