@@ -184,7 +184,7 @@ test_k:
 	poetry run pytest src -k=${k}
 
 smoke_admin_ui:
-	SMOKE_INTEGRATION=1 poetry run pytest src/tests/integration -m integration -v
+	SMOKE_INTEGRATION=1 poetry run pytest src/common/tests/integration -m integration -v
 
 # Poetry
 

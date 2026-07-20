@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from tests.integration.smoke_helpers import SmokeConfig
+from common.tests.integration.smoke_helpers import SmokeConfig
 
 
 @pytest.fixture

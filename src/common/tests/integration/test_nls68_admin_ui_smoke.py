@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from common.utils.identifiers import prefixed_id
-from tests.integration.smoke_helpers import (
+from common.tests.integration.smoke_helpers import (
     SmokeConfig,
     fetch_user_row,
     keycloak_sub_from_token,
@@ -22,6 +22,17 @@ async def test_admin_ui_guard_lists_patients_with_session_cookies(
     smoke_enabled: None,
     smoke_credentials: SmokeConfig,
 ) -> None:
+    """Verify the admin_ui session flow proxies to patients and JIT-provisions a user.
+
+    Authenticates against Keycloak, exchanges the token for admin_ui session cookies,
+    then asserts ``/api/v1/auth/me`` and the guarded patients listing both succeed and
+    that a matching ``users`` row was just-in-time created.
+
+    Args:
+        smoke_enabled: Fixture gating the test on ``SMOKE_INTEGRATION``.
+        smoke_credentials: Live-stack endpoints and credentials for the run.
+    """
+
     config = smoke_credentials
 
     async with httpx.AsyncClient(timeout=30.0) as client:

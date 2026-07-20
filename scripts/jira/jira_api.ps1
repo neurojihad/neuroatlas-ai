@@ -26,6 +26,7 @@ param(
     [string]$Epic,
     [string]$Description,
     [string]$DescriptionFile,
+    [string[]]$Labels = @(),
     [int]$BoardId = 0
 )
 
@@ -111,13 +112,18 @@ function ConvertTo-CreateIssueJson {
         [string]$Summary,
         [string]$Type,
         [string]$DescriptionText,
-        [string]$EpicKey = ""
+        [string]$EpicKey = "",
+        [string[]]$Labels = @()
     )
     $adf = ConvertTo-AdfJsonString -Text $DescriptionText
     $summaryEscaped = Escape-JsonString -Value $Summary
     $json = "{""fields"":{""project"":{""key"":""$Project""},""summary"":""$summaryEscaped"",""description"":$adf,""issuetype"":{""name"":""$Type""}"
     if ($EpicKey) {
         $json += ",""parent"":{""key"":""$EpicKey""}"
+    }
+    if ($Labels -and $Labels.Count -gt 0) {
+        $labelJson = ($Labels | ForEach-Object { '"' + (Escape-JsonString -Value $_) + '"' }) -join ","
+        $json += ",""labels"":[$labelJson]"
     }
     $json += "}}"
     return $json
@@ -266,10 +272,18 @@ switch ($Command.ToLowerInvariant()) {
             throw "Usage: jira_api.ps1 create -Type Story -Summary ""..."" [-Epic NLS-EPIC-02] [-Description ""..."" | -DescriptionFile path]"
         }
         $descText = Get-DescriptionText
-        $json = ConvertTo-CreateIssueJson -Project $cfg.Project -Summary $Summary -Type $Type -DescriptionText $descText -EpicKey $Epic
+        $json = ConvertTo-CreateIssueJson -Project $cfg.Project -Summary $Summary -Type $Type -DescriptionText $descText -EpicKey $Epic -Labels $Labels
         $result = Invoke-JiraRequest -Method POST -Path "/rest/api/3/issue" -BodyJson $json
         Write-Output ("Created: {0}" -f $result.key)
         Write-Output ("URL:     {0}/browse/{1}" -f $cfg.BaseUrl, $result.key)
+    }
+
+    "delete" {
+        if (-not $Arg1) {
+            throw "Usage: jira_api.ps1 delete NLS-123"
+        }
+        Invoke-JiraRequest -Method DELETE -Path ("/rest/api/3/issue/{0}" -f $Arg1) | Out-Null
+        Write-Output ("Deleted: {0}" -f $Arg1)
     }
 
     "transitions" {
@@ -414,6 +428,6 @@ switch ($Command.ToLowerInvariant()) {
     }
 
     default {
-        throw "Unknown command '$Command'. Use: search, get, create, transitions, comment, boards, projects, verify, sprints, sprint-issues, start-sprint, sprint-add, sprint-update-goal"
+        throw "Unknown command '$Command'. Use: search, get, create, delete, transitions, comment, boards, projects, verify, sprints, sprint-issues, start-sprint, sprint-add, sprint-update-goal"
     }
 }

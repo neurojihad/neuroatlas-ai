@@ -445,7 +445,7 @@ Shortcut:  make.cmd up_infra   (same as .\make.ps1 up_infra)
 
     "smoke_admin_ui" {
         $env:SMOKE_INTEGRATION = "1"
-        Invoke-PoetryRun --with patients pytest src/tests/integration -m integration -v
+        Invoke-PoetryRun pytest src/common/tests/integration -m integration -v
     }
 
     "relock" {

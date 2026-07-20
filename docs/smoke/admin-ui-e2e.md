@@ -2,7 +2,7 @@
 
 Verifies the **admin_ui BFF → patients** path with a real Keycloak JWT and JIT shadow-user upsert.
 
-Automated test: `src/tests/integration/test_nls68_admin_ui_smoke.py`  
+Automated test: `src/common/tests/integration/test_nls68_admin_ui_smoke.py`  
 Make target: `make smoke_admin_ui` (Windows: `.\make.ps1 smoke_admin_ui`)
 
 ## Prerequisites

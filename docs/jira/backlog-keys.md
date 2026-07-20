@@ -14,6 +14,7 @@ Project key: **NLS**. Plan refs (NLS-*) map to auto-assigned Jira keys.
 | NLS-EPIC-06 | NLS-11 | Machine learning |
 | NLS-EPIC-07 | NLS-12 | Observability & ops |
 | NLS-EPIC-08 | NLS-13 | Frontend |
+| NLS-EPIC-09 | NLS-77 | Access model / RBAC (IAM service) |
 
 ## Stories
 
@@ -84,3 +85,32 @@ Project key: **NLS**. Plan refs (NLS-*) map to auto-assigned Jira keys.
 | NLS-ADMIN-07 | NLS-67 | NLS-6 | Docker compose: admin_ui on port 8000 (browser entry) |
 | NLS-ADMIN-08 | NLS-68 | NLS-7 | E2E smoke: browser login via admin_ui to patients API + JIT user row |
 | NLS-ADMIN-09 | NLS-69 | NLS-8 | Auth diagram: admin_ui BFF + browser OIDC flow |
+
+## Access model / RBAC — IAM service (EPIC-09)
+
+Created in Jira via `.\scripts\jira\create_rbac_tasks.ps1` (epic `NLS-77`, stories `NLS-78..99`).
+
+| plan ref | Jira | Epic | Title |
+|----------|------|------|-------|
+| NLS-901 | NLS-78 | NLS-EPIC-09 | Add DatabaseException adapter-layer exception |
+| NLS-902 | NLS-79 | NLS-EPIC-09 | db_measure metrics decorator + CrudOperation enum |
+| NLS-903 | NLS-80 | NLS-EPIC-09 | Cursor pagination helper + ext_str util |
+| NLS-904 | NLS-81 | NLS-EPIC-09 | IAM service scaffold (src/iam/) |
+| NLS-905 | NLS-82 | NLS-EPIC-09 | RBAC domain entities |
+| NLS-906 | NLS-83 | NLS-EPIC-09 | AccessModelRepository + AccessModelUnitOfWork ports |
+| NLS-907 | NLS-84 | NLS-EPIC-09 | RBAC domain commands + queries |
+| NLS-908 | NLS-85 | NLS-EPIC-09 | IAM domain/tasks.py orchestration stub |
+| NLS-909 | NLS-86 | NLS-EPIC-09 | RBAC ORM models + extend UserORM |
+| NLS-910 | NLS-87 | NLS-EPIC-09 | Alembic migration 0003_rbac |
+| NLS-911 | NLS-88 | NLS-EPIC-09 | SQLAlchemyAccessModelRepository (postgres.py) |
+| NLS-912 | NLS-89 | NLS-EPIC-09 | SQLAlchemy IAM Unit of Work |
+| NLS-913 | NLS-90 | NLS-EPIC-09 | Redis cache adapter + wiring |
+| NLS-914 | NLS-91 | NLS-EPIC-09 | Outbound gateways/ HTTP client scaffold |
+| NLS-915 | NLS-92 | NLS-EPIC-09 | email/ notification adapter scaffold |
+| NLS-916 | NLS-93 | NLS-EPIC-09 | IAM HTTP adapter (router, schemas, deps) |
+| NLS-917 | NLS-94 | NLS-EPIC-09 | Fake in-memory access model (repo + UoW) |
+| NLS-918 | NLS-95 | NLS-EPIC-09 | Domain unit tests against fakes + conftest |
+| NLS-919 | NLS-96 | NLS-EPIC-09 | Smoke test on FakeUnitOfWork (no Postgres) |
+| NLS-920 | NLS-97 | NLS-EPIC-09 | SQLAlchemy adapter integration tests (marked, Postgres) |
+| NLS-921 | NLS-98 | NLS-EPIC-09 | IAM Docker/compose/Makefile wiring |
+| NLS-922 | NLS-99 | NLS-EPIC-09 | ADR + docs update (id strategy, UserORM, RBAC schema) |
