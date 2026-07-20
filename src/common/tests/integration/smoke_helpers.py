@@ -112,9 +112,7 @@ async def obtain_keycloak_access_token(client: httpx.AsyncClient, config: SmokeC
         RuntimeError: If the token request fails or the response omits ``access_token``.
     """
 
-    token_url = (
-        f"{config.keycloak_url}/realms/{config.keycloak_realm}/protocol/openid-connect/token"
-    )
+    token_url = f"{config.keycloak_url}/realms/{config.keycloak_realm}/protocol/openid-connect/token"
     response = await client.post(
         token_url,
         data={

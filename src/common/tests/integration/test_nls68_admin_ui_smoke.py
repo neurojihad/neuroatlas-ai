@@ -5,7 +5,6 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from common.utils.identifiers import prefixed_id
 from common.tests.integration.smoke_helpers import (
     SmokeConfig,
     fetch_user_row,
@@ -14,6 +13,7 @@ from common.tests.integration.smoke_helpers import (
     session_cookies_from_token,
     wait_for_health,
 )
+from common.utils.identifiers import prefixed_id
 
 
 @pytest.mark.integration
