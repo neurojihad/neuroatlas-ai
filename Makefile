@@ -77,7 +77,7 @@ reset_keycloak:
 	$(MAKE) keycloak_ensure
 
 kafka_topics:
-	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run --with messaging python infra/kafka/init_topics.py
+	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run python infra/kafka/init_topics.py
 
 kafka_logs:
 	docker logs -f kafka_neuroatlas
@@ -184,7 +184,7 @@ test_k:
 	poetry run pytest src -k=${k}
 
 smoke_admin_ui:
-	SMOKE_INTEGRATION=1 poetry run --with patients pytest src/tests/integration -m integration -v
+	SMOKE_INTEGRATION=1 poetry run pytest src/tests/integration -m integration -v
 
 # Poetry
 

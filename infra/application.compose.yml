@@ -14,9 +14,9 @@ x-app-env-file: &app-env-file
 x-common-env: &common-env
   ENVIRONMENT: ${ENVIRONMENT:-local}
   LOG_LEVEL: ${LOG_LEVEL:-INFO}
-  PATIENTS_ROUTE: ${PATIENTS_ROUTE:-patients:8000}
-  ML_ROUTE: ${ML_ROUTE:-ml:8000}
-  HOUSEKEEPER_ROUTE: ${HOUSEKEEPER_ROUTE:-housekeeper:8000}
+  PATIENTS_ROUTE: patients:8000
+  ML_ROUTE: ml:8000
+  HOUSEKEEPER_ROUTE: housekeeper:8000
   KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_DOCKER_BOOTSTRAP_SERVERS:-kafka:9092}
 
 x-oidc-docker-env: &oidc-docker-env
