@@ -14,6 +14,7 @@ Project key: **NLS**. Plan refs (NLS-*) map to auto-assigned Jira keys.
 | NLS-EPIC-06 | NLS-11 | Machine learning |
 | NLS-EPIC-07 | NLS-12 | Observability & ops |
 | NLS-EPIC-08 | NLS-13 | Frontend |
+| NLS-EPIC-09 | NLS-72 | Access model / RBAC (IAM service) |
 | NLS-EPIC-09 | NLS-77 | Access model / RBAC (IAM service) |
 
 ## Stories
@@ -88,29 +89,38 @@ Project key: **NLS**. Plan refs (NLS-*) map to auto-assigned Jira keys.
 
 ## Access model / RBAC — IAM service (EPIC-09)
 
-Created in Jira via `.\scripts\jira\create_rbac_tasks.ps1` (epic `NLS-77`, stories `NLS-78..99`).
+Epic `NLS-EPIC-09` = **NLS-72**. Created via `.\scripts\jira\create_rbac_tasks.ps1`.
+Stories `NLS-901` (NLS-73) and `NLS-902` (NLS-74) are created; `NLS-903..NLS-922` are **pending**
+(live-create step was interrupted). Resume with:
+
+```powershell
+.\scripts\jira\create_rbac_tasks.ps1 -EpicKey NLS-72 -OnlyRefs NLS-903,NLS-904,NLS-905,NLS-906,NLS-907,NLS-908,NLS-909,NLS-910,NLS-911,NLS-912,NLS-913,NLS-914,NLS-915,NLS-916,NLS-917,NLS-918,NLS-919,NLS-920,NLS-921,NLS-922
+```
+
+> Cleanup: duplicates `NLS-75` (NLS-901) and `NLS-76` (NLS-902) were created during a retry —
+> delete with `.\scripts\jira\jira_api.ps1 delete NLS-75` and `... delete NLS-76`.
 
 | plan ref | Jira | Epic | Title |
 |----------|------|------|-------|
-| NLS-901 | NLS-78 | NLS-EPIC-09 | Add DatabaseException adapter-layer exception |
-| NLS-902 | NLS-79 | NLS-EPIC-09 | db_measure metrics decorator + CrudOperation enum |
-| NLS-903 | NLS-80 | NLS-EPIC-09 | Cursor pagination helper + ext_str util |
-| NLS-904 | NLS-81 | NLS-EPIC-09 | IAM service scaffold (src/iam/) |
-| NLS-905 | NLS-82 | NLS-EPIC-09 | RBAC domain entities |
-| NLS-906 | NLS-83 | NLS-EPIC-09 | AccessModelRepository + AccessModelUnitOfWork ports |
-| NLS-907 | NLS-84 | NLS-EPIC-09 | RBAC domain commands + queries |
-| NLS-908 | NLS-85 | NLS-EPIC-09 | IAM domain/tasks.py orchestration stub |
-| NLS-909 | NLS-86 | NLS-EPIC-09 | RBAC ORM models + extend UserORM |
-| NLS-910 | NLS-87 | NLS-EPIC-09 | Alembic migration 0003_rbac |
-| NLS-911 | NLS-88 | NLS-EPIC-09 | SQLAlchemyAccessModelRepository (postgres.py) |
-| NLS-912 | NLS-89 | NLS-EPIC-09 | SQLAlchemy IAM Unit of Work |
-| NLS-913 | NLS-90 | NLS-EPIC-09 | Redis cache adapter + wiring |
-| NLS-914 | NLS-91 | NLS-EPIC-09 | Outbound gateways/ HTTP client scaffold |
-| NLS-915 | NLS-92 | NLS-EPIC-09 | email/ notification adapter scaffold |
-| NLS-916 | NLS-93 | NLS-EPIC-09 | IAM HTTP adapter (router, schemas, deps) |
-| NLS-917 | NLS-94 | NLS-EPIC-09 | Fake in-memory access model (repo + UoW) |
-| NLS-918 | NLS-95 | NLS-EPIC-09 | Domain unit tests against fakes + conftest |
-| NLS-919 | NLS-96 | NLS-EPIC-09 | Smoke test on FakeUnitOfWork (no Postgres) |
-| NLS-920 | NLS-97 | NLS-EPIC-09 | SQLAlchemy adapter integration tests (marked, Postgres) |
-| NLS-921 | NLS-98 | NLS-EPIC-09 | IAM Docker/compose/Makefile wiring |
-| NLS-922 | NLS-99 | NLS-EPIC-09 | ADR + docs update (id strategy, UserORM, RBAC schema) |
+| NLS-901 | NLS-73 | NLS-72 | Add DatabaseException adapter-layer exception |
+| NLS-902 | NLS-74 | NLS-72 | db_measure metrics decorator + CrudOperation enum |
+| NLS-903 | pending | NLS-72 | Cursor pagination helper + ext_str util |
+| NLS-904 | pending | NLS-72 | IAM service scaffold (src/iam/) |
+| NLS-905 | pending | NLS-72 | RBAC domain entities |
+| NLS-906 | pending | NLS-72 | AccessModelRepository + AccessModelUnitOfWork ports |
+| NLS-907 | pending | NLS-72 | RBAC domain commands + queries |
+| NLS-908 | pending | NLS-72 | IAM domain/tasks.py orchestration stub |
+| NLS-909 | pending | NLS-72 | RBAC ORM models + extend UserORM |
+| NLS-910 | pending | NLS-72 | Alembic migration 0003_rbac |
+| NLS-911 | pending | NLS-72 | SQLAlchemyAccessModelRepository (postgres.py) |
+| NLS-912 | pending | NLS-72 | SQLAlchemy IAM Unit of Work |
+| NLS-913 | pending | NLS-72 | Redis cache adapter + wiring |
+| NLS-914 | pending | NLS-72 | Outbound gateways/ HTTP client scaffold |
+| NLS-915 | pending | NLS-72 | email/ notification adapter scaffold |
+| NLS-916 | pending | NLS-72 | IAM HTTP adapter (router, schemas, deps) |
+| NLS-917 | pending | NLS-72 | Fake in-memory access model (repo + UoW) |
+| NLS-918 | pending | NLS-72 | Domain unit tests against fakes + conftest |
+| NLS-919 | pending | NLS-72 | Smoke test on FakeUnitOfWork (no Postgres) |
+| NLS-920 | pending | NLS-72 | SQLAlchemy adapter integration tests (marked, Postgres) |
+| NLS-921 | pending | NLS-72 | IAM Docker/compose/Makefile wiring |
+| NLS-922 | pending | NLS-72 | ADR + docs update (id strategy, UserORM, RBAC schema) |
