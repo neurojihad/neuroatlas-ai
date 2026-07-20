@@ -8,8 +8,8 @@ from admin_ui.adapters.http.schemas import AuthUrlSchema, LogoutSchema, UserInfo
 from admin_ui.auth.keycloak import KeycloakOidcClient
 from admin_ui.auth.session import PkceStore, build_authorize_url, sanitize_redirect_path
 from admin_ui.settings import AdminUiSettings
+from common.adapters.http.schemas import ResponseSchema
 from common.core.exceptions import Unauthorized
-from common.http.schemas import ResponseSchema
 
 router_v1 = APIRouter(prefix="/api/v1", tags=["auth"])
 

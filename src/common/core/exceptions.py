@@ -52,6 +52,24 @@ class BusException(Exception):
         self.details = details
 
 
+class DatabaseException(Exception):
+    """Adapter/infra-layer exception raised when a database operation fails.
+
+    Adapters wrap infrastructure/DB failures in this exception; the domain layer
+    never raises it. Per the backend_conventions orchestration rule it re-raises
+    through tasks and Kafka consumers so callers can retry or fail fast. The HTTP
+    handler maps it to a generic 500 response and logs ``details`` server-side so
+    internal database errors are not leaked to clients.
+    """
+
+    status_code: int = 500
+
+    def __init__(self, message: str, details: str | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.details = details
+
+
 class AuthException(Exception):
     """Raised when the auth adapter fails to validate a token."""
 

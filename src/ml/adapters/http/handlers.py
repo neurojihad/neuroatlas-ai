@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from common.http.schemas import ResponseSchema
+from common.adapters.http.schemas import ResponseSchema
 from ml.adapters.http import dependencies
 from ml.adapters.http.schemas import PredictionSchema, PredictPayload
 from ml.domain import queries

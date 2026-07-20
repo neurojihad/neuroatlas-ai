@@ -4,9 +4,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Query, status
 
 from common.adapters.http.auth_dependencies import require_clinician
+from common.adapters.http.schemas import ListResponseSchema, ResponseSchema
 from common.application.logging import logger
 from common.core.entities.user import UserInfo
-from common.http.schemas import ListResponseSchema, ResponseSchema
 from patients.adapters.http import dependencies
 from patients.adapters.http.schemas import (
     AssessmentSchema,

@@ -1,7 +1,13 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from common.core.exceptions import AuthException, ContextValidationError, DomainError
+from common.application.logging import logger
+from common.core.exceptions import (
+    AuthException,
+    ContextValidationError,
+    DatabaseException,
+    DomainError,
+)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -19,4 +25,18 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content={"message": exc.message, "details": exc.details},
+        )
+
+    @app.exception_handler(DatabaseException)
+    async def _database_error_handler(request: Request, exc: DatabaseException) -> JSONResponse:
+        await logger.aerror(
+            "Database adapter failure.",
+            method=request.method,
+            path=request.url.path,
+            details=exc.details,
+            exc_info=exc,
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"message": "Internal server error.", "details": None},
         )
