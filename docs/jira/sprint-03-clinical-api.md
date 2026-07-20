@@ -26,7 +26,7 @@ against NLS-ADMIN-* equivalents when convenient.
 | # | plan ref | Jira | Summary | Epic | Depends on | Status |
 |---|----------|------|---------|------|------------|--------|
 | 1 | NLS-ADMIN-08 | NLS-68 | E2E smoke: browser login via admin_ui → patients + JIT | NLS-7 | NLS-63, NLS-17 | In Progress |
-| 2 | NLS-ADMIN-09 | NLS-69 | Auth diagram: admin_ui BFF + browser OIDC flow | NLS-8 | — | In Progress |
+| 2 | NLS-ADMIN-09 | NLS-69 | Auth diagram: admin_ui BFF + browser OIDC flow | NLS-8 | — | Done |
 | 3 | NLS-202 | NLS-15 | Alembic migrations: patients + assessments tables | NLS-7 | — | To Do |
 | 4 | NLS-201 | NLS-16 | Patients SQLAlchemy adapter (replace in-memory UoW) | NLS-7 | NLS-15 | To Do |
 | 5 | NLS-203 | NLS-25 | Patients integration tests against Postgres | NLS-7 | NLS-15, NLS-16 | To Do |
@@ -42,7 +42,7 @@ Verify sprint membership:
 ## Definition of Done (sprint)
 
 - [ ] `make smoke_admin_ui` passes with `AUTH_ENABLED=true` (NLS-68)
-- [ ] Auth diagram updated for admin_ui BFF flow (NLS-69)
+- [x] Auth diagram updated for admin_ui BFF flow (NLS-69)
 - [ ] Patients + assessments tables migrated; SQLAlchemy UoW replaces in-memory (NLS-15, NLS-16)
 - [ ] Integration tests run against Postgres (NLS-25)
 - [ ] `make check` green on touched packages
