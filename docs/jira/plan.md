@@ -156,11 +156,11 @@ Create in Jira: `.\scripts\jira\create_admin_ui_tasks.ps1` (adds to Sprint Pione
 
 ## Active sprint
 
-**Sprint 02 — admin_ui Pioneer** (6–13 Jul 2026, Jira sprint id **68**): see [`sprint-02-admin-ui-pioneer.md`](sprint-02-admin-ui-pioneer.md)
+**Sprint 03 — Clinical API foundation** (19 Jul → 2 Aug 2026, Jira sprint id **101**, board name `S03 Clinical API`): see [`sprint-03-clinical-api.md`](sprint-03-clinical-api.md)
 
-**Sprint goal:** Browser login via **admin_ui** BFF (:8000) with Keycloak JWT proxy to patients; gateway stories (NLS-50..59) for traceability.
+**Sprint goal:** Finish admin_ui E2E + auth docs; patients on Postgres.
 
-**Previous:** [Sprint 01 — Pioneer](sprint-01-pioneer.md) (id 35, closed).
+**Previous:** [Sprint 02 — admin_ui Pioneer](sprint-02-admin-ui-pioneer.md) (id 68, closed) · [Sprint 01 — Pioneer](sprint-01-pioneer.md) (id 35, closed).
 
 Full backlog keys: [`backlog-keys.md`](backlog-keys.md) (45 stories + 8 epics incl. NLS-GW-01..10).
 

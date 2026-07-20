@@ -356,15 +356,15 @@ switch ($Command.ToLowerInvariant()) {
             throw "Usage: jira_api.ps1 start-sprint <sprint_id>"
         }
         $current = Invoke-JiraRequest -Method GET -Path ("/rest/agile/1.0/sprint/{0}" -f $Arg1)
-        $start = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-        $end = (Get-Date).AddDays(14).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+        $start = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.000Z")
+        $end = (Get-Date).AddDays(14).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.000Z")
         $body = @{
             name      = $current.name
             state     = "active"
             startDate = $start
             endDate   = $end
         }
-        if ($current.goal) {
+        if ($current.PSObject.Properties.Name -contains "goal" -and $current.goal) {
             $body["goal"] = $current.goal
         }
         $result = Invoke-JiraRequest -Method PUT -Path ("/rest/agile/1.0/sprint/{0}" -f $Arg1) -Body $body
@@ -399,13 +399,13 @@ switch ($Command.ToLowerInvariant()) {
             name = $current.name
             goal = $goalText.Trim()
         }
-        if ($current.state) {
+        if ($current.PSObject.Properties.Name -contains "state" -and $current.state) {
             $body["state"] = $current.state
         }
-        if ($current.startDate) {
+        if ($current.PSObject.Properties.Name -contains "startDate" -and $current.startDate) {
             $body["startDate"] = $current.startDate
         }
-        if ($current.endDate) {
+        if ($current.PSObject.Properties.Name -contains "endDate" -and $current.endDate) {
             $body["endDate"] = $current.endDate
         }
         $result = Invoke-JiraRequest -Method PUT -Path ("/rest/agile/1.0/sprint/{0}" -f $Arg1) -Body $body

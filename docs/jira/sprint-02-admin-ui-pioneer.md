@@ -3,7 +3,7 @@
 **Dates:** 6 Jul 2026 → 13 Jul 2026 (1 week)  
 **Sprint goal:** Browser login via **admin_ui** BFF (:8000) with Keycloak JWT proxy to patients; gateway stories (NLS-50..59) for traceability.
 
-**Status:** **Active** in Jira (project key `NLS`) — sprint **Sprint 02 — admin_ui Pioneer** (id **68**).
+**Status:** **Closed** in Jira (project key `NLS`) — sprint **Sprint 02 — admin_ui Pioneer** (id **68**). Superseded by [Sprint 03](sprint-03-clinical-api.md).
 
 > **Architecture note (vs PaymentGate):** NeuroAtlas does **not** exchange Keycloak → AtomID. The **same Keycloak access token** is validated at `admin_ui` / backends. Embedded React + auth handlers follow PaymentGate `admin_ui` layout. See [`auth-paymentgate-comparison.md`](../diagrams/auth-paymentgate-comparison.md).
 
