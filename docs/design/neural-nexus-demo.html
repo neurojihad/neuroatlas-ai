@@ -452,6 +452,45 @@
     }
     .tab.active { color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); }
     .tab.locked { opacity: 0.5; }
+    .tab.profile-tab { cursor: pointer; }
+    .tab.profile-tab:hover { color: var(--text-primary); }
+
+    .profile-tab-panel { display: none; }
+    .profile-tab-panel.active { display: block; }
+    .profile-sub-panel { display: none; }
+    .profile-sub-panel.active { display: block; }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .kv-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid rgba(123, 143, 168, 0.1);
+    }
+    .kv-row span:first-child { color: var(--text-muted); }
+    .kv-row span:last-child { font-family: var(--font-mono); font-size: 0.78rem; }
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 0.75rem;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid rgba(123, 143, 168, 0.1);
+      font-size: 0.82rem;
+    }
+    .timeline-item time {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    @media (max-width: 900px) {
+      .overview-grid { grid-template-columns: 1fr; }
+    }
     .sparkline {
       height: 60px;
       margin: 1rem 0;
@@ -544,23 +583,361 @@
 
     @media (max-width: 900px) {
       .metrics-row { grid-template-columns: repeat(2, 1fr); }
-      .dash-grid, .session-grid { grid-template-columns: 1fr; }
+      .dash-grid, .session-grid, .ai-grid { grid-template-columns: 1fr; }
       .sidebar { width: 60px; }
       .sidebar-brand, .nav-item span { display: none; }
     }
+
+    /* ── ML + LLM demo components ── */
+    .badge-ml {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      border: 1px solid;
+    }
+    .badge-ml.high { color: var(--bio-green); border-color: var(--bio-green); background: rgba(57, 255, 136, 0.08); }
+    .badge-ml.medium { color: var(--warn-amber); border-color: var(--warn-amber); background: rgba(255, 176, 32, 0.08); }
+    .badge-ml.low { color: var(--alert-red); border-color: var(--alert-red); background: rgba(255, 59, 92, 0.08); }
+    .badge-ml.pending { color: var(--text-muted); border-color: rgba(123, 143, 168, 0.4); }
+
+    .prediction-hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .score-ring {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 4px;
+      background: rgba(11, 18, 32, 0.8);
+    }
+    .score-ring .pct {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      color: var(--bio-green);
+      line-height: 1;
+    }
+    .score-ring .caption {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+      text-align: center;
+    }
+    .shap-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 40px;
+      gap: 0.5rem;
+      align-items: center;
+      font-size: 0.78rem;
+      margin-bottom: 0.5rem;
+    }
+    .shap-bar {
+      height: 6px;
+      background: rgba(123, 143, 168, 0.2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .shap-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--bio-green));
+      border-radius: 2px;
+    }
+    .shap-fill.negative { background: linear-gradient(90deg, var(--alert-red), var(--warn-amber)); }
+    .model-tag {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--neon-magenta);
+      letter-spacing: 0.06em;
+    }
+
+    .model-strip {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .model-chip {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      padding: 0.45rem 0.85rem;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 4px;
+      color: var(--text-muted);
+      background: rgba(11, 18, 32, 0.6);
+      cursor: pointer;
+    }
+    .model-chip.active {
+      color: var(--neon-cyan);
+      border-color: var(--neon-cyan);
+      background: rgba(0, 229, 255, 0.08);
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+    }
+    .model-chip.torsional.active {
+      color: var(--neon-magenta);
+      border-color: var(--neon-magenta);
+      background: rgba(255, 43, 214, 0.08);
+      box-shadow: 0 0 10px rgba(255, 43, 214, 0.15);
+    }
+    .prediction-block { display: none; }
+    .prediction-block.active { display: contents; }
+
+    .badge-cohort {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      border: 1px solid rgba(123, 143, 168, 0.35);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .badge-cohort.hemi { color: var(--neon-cyan); border-color: rgba(0, 229, 255, 0.4); }
+    .badge-cohort.tors { color: var(--neon-magenta); border-color: rgba(255, 43, 214, 0.4); }
+
+    .rule-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+      font-size: 0.78rem;
+      margin-bottom: 0.5rem;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid rgba(123, 143, 168, 0.08);
+    }
+    .rule-pass { color: var(--bio-green); font-family: var(--font-mono); font-size: 0.68rem; }
+    .rule-warn { color: var(--warn-amber); font-family: var(--font-mono); font-size: 0.68rem; }
+    .rule-fail { color: var(--alert-red); font-family: var(--font-mono); font-size: 0.68rem; }
+    .algo-tag {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--warn-amber);
+      letter-spacing: 0.06em;
+    }
+
+    .measurement-input-section { display: none; margin-bottom: 1.25rem; }
+    .measurement-input-section.visible { display: block; }
+
+    .clinical-form {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.85rem 1rem;
+    }
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .form-field.span-2 { grid-column: span 2; }
+    .form-field label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .form-field input,
+    .form-field select {
+      padding: 0.55rem 0.65rem;
+      background: rgba(11, 18, 32, 0.9);
+      border: 1px solid rgba(255, 43, 214, 0.25);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+    .form-field input:focus,
+    .form-field select:focus {
+      outline: none;
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 8px rgba(255, 43, 214, 0.2);
+    }
+    .form-field input.motor-field,
+    .form-field select.motor-field {
+      border-color: rgba(0, 229, 255, 0.25);
+    }
+    .form-field input.motor-field:focus,
+    .form-field select.motor-field:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+    }
+    .form-actions {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 0.25rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(123, 143, 168, 0.15);
+    }
+    .form-hint {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+    @media (max-width: 900px) {
+      .clinical-form { grid-template-columns: 1fr 1fr; }
+    }
+
+    .ai-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 1rem;
+      min-height: 420px;
+    }
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 420px;
+    }
+    .chat-log {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin-bottom: 1rem;
+      max-height: 320px;
+    }
+    .chat-bubble {
+      padding: 0.85rem 1rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      max-width: 95%;
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: rgba(0, 229, 255, 0.1);
+      border: 1px solid rgba(0, 229, 255, 0.25);
+    }
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: rgba(255, 43, 214, 0.06);
+      border: 1px solid rgba(255, 43, 214, 0.2);
+    }
+    .citation {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--neon-cyan);
+      border: 1px solid rgba(0, 229, 255, 0.35);
+      padding: 0.05rem 0.35rem;
+      border-radius: 2px;
+      margin: 0 0.15rem;
+      vertical-align: super;
+    }
+    .chat-input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .chat-input-row input {
+      flex: 1;
+      padding: 0.65rem 0.85rem;
+      background: rgba(11, 18, 32, 0.9);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+    }
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.5rem 0;
+      font-size: 0.8rem;
+      border-bottom: 1px solid rgba(123, 143, 168, 0.1);
+    }
+    .pipeline-step .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--bio-green);
+      box-shadow: 0 0 6px var(--bio-green);
+    }
+    .pipeline-step.pending .dot { background: var(--warn-amber); box-shadow: 0 0 6px var(--warn-amber); }
+
+    /* ── Russian tooltips (hover / focus) ── */
+    [data-tip] {
+      position: relative;
+      cursor: help;
+    }
+    [data-tip]::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 10px);
+      transform: translateX(-50%);
+      min-width: 160px;
+      max-width: 300px;
+      padding: 0.55rem 0.75rem;
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      line-height: 1.4;
+      font-weight: 400;
+      letter-spacing: normal;
+      text-transform: none;
+      color: var(--text-primary);
+      background: rgba(5, 8, 16, 0.96);
+      border: 1px solid var(--neon-cyan);
+      border-radius: 4px;
+      box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+      white-space: normal;
+      text-align: left;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s ease, visibility 0.15s ease;
+      z-index: 3000;
+    }
+    [data-tip][data-tip-pos="bottom"]::after {
+      bottom: auto;
+      top: calc(100% + 10px);
+    }
+    [data-tip][data-tip-pos="left"]::after {
+      left: auto;
+      right: calc(100% + 10px);
+      bottom: 50%;
+      top: auto;
+      transform: translateY(50%);
+    }
+    [data-tip][data-tip-pos="right"]::after {
+      left: calc(100% + 10px);
+      bottom: 50%;
+      top: auto;
+      transform: translateY(-50%);
+    }
+    [data-tip]:hover::after,
+    [data-tip]:focus-visible::after {
+      opacity: 1;
+      visibility: visible;
+    }
+    .demo-bar [data-tip] { cursor: pointer; }
+    .data-table [data-tip] { cursor: help; }
   </style>
 </head>
 <body>
 
   <!-- Demo navigation (preview only) -->
   <nav class="demo-bar" aria-label="Design demo page switcher">
-    <span>DESIGN DEMO</span>
-    <button class="demo-tab active" data-page="login">1 · Access Gate</button>
-    <button class="demo-tab" data-page="dashboard">2 · Command Center</button>
-    <button class="demo-tab" data-page="patients">3 · Patients Registry</button>
-    <button class="demo-tab" data-page="profile">4 · Neural Profile</button>
-    <button class="demo-tab" data-page="session">5 · Session Matrix</button>
-    <button class="demo-tab" data-page="callback">5b · Callback</button>
+    <span data-tip="Статичный макет интерфейса NeuroAtlas — наведите на элементы для подсказок" data-tip-pos="bottom">DESIGN DEMO</span>
+    <button class="demo-tab active" data-page="login" data-tip="Вход через Keycloak SSO (единый вход организации)" data-tip-pos="bottom">1 · Access Gate</button>
+    <button class="demo-tab" data-page="dashboard" data-tip="Главная панель: метрики, активность, ML/LLM конвейер" data-tip-pos="bottom">2 · Command Center</button>
+    <button class="demo-tab" data-page="patients" data-tip="Реестр пациентов с прогнозами ML" data-tip-pos="bottom">3 · Patients Registry</button>
+    <button class="demo-tab" data-page="profile" data-tip="Карточка пациента: ML (моторный) + алгоритм (торсионные), RAG" data-tip-pos="bottom">4 · Neural Profile</button>
+    <button class="demo-tab" data-page="ai" data-tip="ИИ-ассистент: LLM + поиск по литературе + ML" data-tip-pos="bottom">5 · AI Copilot</button>
+    <button class="demo-tab" data-page="session" data-tip="Сессия пользователя и матрица доступа по ролям" data-tip-pos="bottom">6 · Session Matrix</button>
+    <button class="demo-tab" data-page="callback" data-tip="Экран загрузки после OAuth callback от Keycloak" data-tip-pos="bottom">6b · Callback</button>
   </nav>
 
   <div class="bg-layer" aria-hidden="true">
@@ -573,18 +950,18 @@
   <section id="page-login" class="page active" aria-label="Access Gate login preview">
     <div class="login-card hud-corners">
       <div class="login-logo">
-        <div class="logo-mark">NA</div>
+        <div class="logo-mark" data-tip="Логотип NeuroAtlas — клиническая система поддержки решений">NA</div>
         <div>
-          <div class="login-title">NEURAL COMMAND ACCESS</div>
-          <div class="login-sub">Pediatric neurorehabilitation CDS</div>
+          <div class="login-title" data-tip="Точка входа для авторизованного медицинского персонала">NEURAL COMMAND ACCESS</div>
+          <div class="login-sub" data-tip="Система поддержки решений в детской нейрореабилитации">Pediatric neurorehabilitation CDS</div>
         </div>
       </div>
       <div class="login-divider"></div>
-      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;">
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;" data-tip="Доступ только для сотрудников с учётной записью в Keycloak">
         Secure clinical interface for authorized personnel. Authenticate via organization SSO.
       </p>
-      <button class="btn-primary" type="button">&#9654;&nbsp; INITIATE SSO SESSION</button>
-      <p class="login-footer">Secured via Keycloak &middot; v0.1.0 Pioneer</p>
+      <button class="btn-primary" type="button" data-tip="Начать вход через Keycloak (OIDC + PKCE). Перенаправление на страницу организации">&#9654;&nbsp; INITIATE SSO SESSION</button>
+      <p class="login-footer" data-tip="Аутентификация через Keycloak · версия Pioneer (исследовательский прототип)">Secured via Keycloak &middot; v0.1.0 Pioneer</p>
     </div>
   </section>
 
@@ -592,54 +969,46 @@
   <section id="page-dashboard" class="page" aria-label="Command Center preview">
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="sidebar-brand">NEUROATLAS</div>
-        <div class="nav-item active"><span>Command Center</span></div>
-        <div class="nav-item"><span>Patients Registry</span></div>
-        <div class="nav-item"><span>Session Matrix</span></div>
+        <div class="sidebar-brand" data-tip="Название системы NeuroAtlas AI" data-tip-pos="right">NEUROATLAS</div>
+        <div class="nav-item active" data-tip="Главная панель — обзор метрик и активности" data-tip-pos="right"><span>Command Center</span></div>
+        <div class="nav-item" data-tip="Список пациентов и ML-прогнозы" data-tip-pos="right"><span>Patients Registry</span></div>
+        <div class="nav-item" data-tip="Профиль сессии и права доступа" data-tip-pos="right"><span>Session Matrix</span></div>
       </aside>
       <div class="main-area">
         <header class="topbar">
-          <span class="topbar-title">COMMAND CENTER</span>
+          <span class="topbar-title" data-tip="Командный центр — сводка по клинике">COMMAND CENTER</span>
           <div class="topbar-user">
-            <span class="role-chip">CLINICIAN</span>
-            <span>dr.sokolov@clinic.org</span>
-            <button class="btn-ghost" type="button">Sign out</button>
+            <span class="role-chip" data-tip="Роль пользователя в Keycloak (clinician)">CLINICIAN</span>
+            <span data-tip="Email из токена OIDC / JIT-запись в БД">dr.sokolov@clinic.org</span>
+            <button class="btn-ghost" type="button" data-tip="Выход из сессии и очистка cookie">Sign out</button>
           </div>
         </header>
         <div class="content">
-          <p style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);margin-bottom:1.25rem;">
+          <p style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);margin-bottom:1.25rem;" data-tip="Приветствие и статус активной сессии">
             Good morning &middot; Session active &middot; 2026-07-07 11:44 UTC+3
           </p>
           <div class="metrics-row">
-            <div class="metric-tile"><div class="value">24</div><div class="label">Total Patients</div></div>
-            <div class="metric-tile"><div class="value">12</div><div class="label">Assessments / Week</div></div>
-            <div class="metric-tile"><div class="value" style="color:var(--warn-amber)">3</div><div class="label">Pending Predictions</div></div>
-            <div class="metric-tile"><div class="value" style="color:var(--bio-green);font-size:1.2rem">OK</div><div class="label">System Health</div></div>
+            <div class="metric-tile" data-tip="Общее число зарегистрированных пациентов в реестре"><div class="value">24</div><div class="label">Total Patients</div></div>
+            <div class="metric-tile" data-tip="Количество оценок (assessments) за последнюю неделю"><div class="value">12</div><div class="label">Assessments / Week</div></div>
+            <div class="metric-tile" data-tip="В очереди: ML-прогнозы моторного исхода и расчёты торсионного алгоритма"><div class="value" style="color:var(--warn-amber)">3</div><div class="label">Pending Predictions</div></div>
+            <div class="metric-tile" data-tip="Сервис RAG + LLM доступен для поиска доказательств"><div class="value" style="color:var(--neon-magenta);font-size:1.4rem">RAG</div><div class="label">LLM Evidence Online</div></div>
           </div>
           <div class="dash-grid">
             <div class="panel">
-              <h3>Recent Activity</h3>
-              <div class="activity-row"><span><code>pat_01K2J3M4N5P6</code> registered</span><span style="color:var(--text-muted);font-size:0.75rem">2h ago</span></div>
-              <div class="activity-row"><span><code>pat_01J8X2Y4Z6W1</code> assessment added</span><span style="color:var(--text-muted);font-size:0.75rem">5h ago</span></div>
-              <div class="activity-row"><span><code>pat_01H5A3B7C9D2</code> profile updated</span><span style="color:var(--text-muted);font-size:0.75rem">1d ago</span></div>
+              <h3 data-tip="Последние события: регистрация, ML, LLM">Recent Activity</h3>
+              <div class="activity-row" data-tip="XGBoost — ML-прогноз моторного исхода"><span><code>pat_01K2J3M4N5P6</code> motor ML prediction completed</span><span style="color:var(--text-muted);font-size:0.75rem">12m ago</span></div>
+              <div class="activity-row" data-tip="Клинический алгоритм — расчёт торсионных измерений"><span><code>pat_01M4N6P8Q0R2</code> torsional algorithm evaluated</span><span style="color:var(--text-muted);font-size:0.75rem">34m ago</span></div>
+              <div class="activity-row" data-tip="LLM сгенерировал краткое резюме по литературе (RAG)"><span><code>pat_01J8X2Y4Z6W1</code> LLM evidence summary generated</span><span style="color:var(--text-muted);font-size:0.75rem">1h ago</span></div>
+              <div class="activity-row" data-tip="Обновлены данные профиля пациента"><span><code>pat_01H5A3B7C9D2</code> profile updated</span><span style="color:var(--text-muted);font-size:0.75rem">1d ago</span></div>
             </div>
             <div class="panel">
-              <h3>Neural Mesh</h3>
-              <div class="neural-viz">
-                <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="100" cy="60" r="4" fill="#00e5ff" opacity="0.9"/>
-                  <circle cx="60" cy="30" r="3" fill="#00e5ff" opacity="0.6"/>
-                  <circle cx="140" cy="30" r="3" fill="#ff2bd6" opacity="0.6"/>
-                  <circle cx="40" cy="80" r="3" fill="#39ff88" opacity="0.5"/>
-                  <circle cx="160" cy="80" r="3" fill="#39ff88" opacity="0.5"/>
-                  <circle cx="100" cy="100" r="3" fill="#00e5ff" opacity="0.5"/>
-                  <line x1="100" y1="60" x2="60" y2="30" stroke="#00e5ff" stroke-width="0.5" opacity="0.4"/>
-                  <line x1="100" y1="60" x2="140" y2="30" stroke="#ff2bd6" stroke-width="0.5" opacity="0.4"/>
-                  <line x1="100" y1="60" x2="40" y2="80" stroke="#39ff88" stroke-width="0.5" opacity="0.3"/>
-                  <line x1="100" y1="60" x2="160" y2="80" stroke="#39ff88" stroke-width="0.5" opacity="0.3"/>
-                  <line x1="100" y1="60" x2="100" y2="100" stroke="#00e5ff" stroke-width="0.5" opacity="0.3"/>
-                </svg>
-              </div>
+              <h3 data-tip="ML для моторного исхода; rule-based алгоритм для торсионных измерений">ML / Algorithm Pipeline</h3>
+              <div class="pipeline-step" data-tip="Маршрутизация: motor → ML, torsional → algorithm"><span class="dot"></span><span>Kafka <code>prediction-requested</code> &rarr; target router</span></div>
+              <div class="pipeline-step" data-tip="ML: XGBoost + SHAP для моторного исхода"><span class="dot"></span><span>ml:8002 &rarr; XGBoost motor + SHAP</span></div>
+              <div class="pipeline-step" data-tip="Алгоритм: Sakellarides-Strecker / Gschwind-Tonkin (без ML)"><span class="dot"></span><span>patients &rarr; torsional rule engine &rarr; Δ supination</span></div>
+              <div class="pipeline-step" data-tip="Семантический поиск (pgvector) питает LLM Orchestrator"><span class="dot"></span><span>Search (pgvector) &rarr; LLM Orchestrator</span></div>
+              <div class="pipeline-step pending" data-tip="1 ML + 2 algorithm eval в очереди"><span class="dot"></span><span>3 jobs queued</span></div>
+              <p style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);margin-top:0.75rem" data-tip="Демо-данные — не подключено к живым сервисам">Demo data &middot; not connected to live services</p>
             </div>
           </div>
         </div>
@@ -651,62 +1020,90 @@
   <section id="page-patients" class="page" aria-label="Patients Registry preview">
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="sidebar-brand">NEUROATLAS</div>
-        <div class="nav-item"><span>Command Center</span></div>
-        <div class="nav-item active"><span>Patients Registry</span></div>
-        <div class="nav-item"><span>Session Matrix</span></div>
+        <div class="sidebar-brand" data-tip="Название системы NeuroAtlas AI" data-tip-pos="right">NEUROATLAS</div>
+        <div class="nav-item" data-tip="Главная панель — обзор метрик и активности" data-tip-pos="right"><span>Command Center</span></div>
+        <div class="nav-item active" data-tip="Список пациентов и ML-прогнозы" data-tip-pos="right"><span>Patients Registry</span></div>
+        <div class="nav-item" data-tip="Профиль сессии и права доступа" data-tip-pos="right"><span>Session Matrix</span></div>
       </aside>
       <div class="main-area">
         <header class="topbar">
-          <span class="topbar-title">PATIENTS REGISTRY</span>
+          <span class="topbar-title" data-tip="Реестр всех пациентов клиники">PATIENTS REGISTRY</span>
           <div class="topbar-user">
-            <span class="role-chip">CLINICIAN</span>
-            <span>dr.sokolov@clinic.org</span>
+            <span class="role-chip" data-tip="Роль пользователя в Keycloak (clinician)">CLINICIAN</span>
+            <span data-tip="Email из токена OIDC">dr.sokolov@clinic.org</span>
           </div>
         </header>
         <div class="content">
           <div class="toolbar">
-            <input class="search-input" type="search" placeholder="Search by ID or diagnosis code..." readonly />
-            <span class="filter-chip active">All</span>
-            <span class="filter-chip">Active</span>
-            <span class="filter-chip">Review</span>
-            <button class="btn-ghost" type="button" style="margin-left:auto;color:var(--neon-cyan);border-color:var(--neon-cyan)">+ Register</button>
+            <input class="search-input" type="search" placeholder="Search by ID or diagnosis code..." readonly data-tip="Поиск по ID пациента или коду МКБ-10" />
+            <span class="filter-chip active" data-tip="Показать всех пациентов">All</span>
+            <span class="filter-chip" data-tip="Когорта гемипарез / гемиплегический ДЦП">Hemiparesis</span>
+            <span class="filter-chip" data-tip="Торсионные измерения — rule-based алгоритм (не ML)">Torsional</span>
+            <span class="filter-chip" data-tip="Только активные кейсы">Active</span>
+            <span class="filter-chip" data-tip="Требуют клинического пересмотра">Review</span>
+            <button class="btn-ghost" type="button" style="margin-left:auto;color:var(--neon-cyan);border-color:var(--neon-cyan)" data-tip="Зарегистрировать нового пациента">+ Register</button>
           </div>
           <div class="panel" style="padding:0;overflow:hidden">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Patient ID</th>
-                  <th>Year of Birth</th>
-                  <th>Sex</th>
-                  <th>Diagnosis</th>
-                  <th>Registered</th>
-                  <th>Status</th>
+                  <th data-tip="Уникальный идентификатор (ULID с префиксом pat_)">Patient ID</th>
+                  <th data-tip="Год рождения пациента">Year of Birth</th>
+                  <th data-tip="Пол: M — мужской, F — женский">Sex</th>
+                  <th data-tip="Код диагноза по МКБ-10">Diagnosis</th>
+                  <th data-tip="Motor = ML (XGBoost); Torsional = clinical algorithm">Target</th>
+                  <th data-tip="Motor: ML probability; Torsional: algorithm-computed Δ">Outlook</th>
+                  <th data-tip="Дата регистрации в системе">Registered</th>
+                  <th data-tip="Клинический статус кейса">Status</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
+                <tr data-tip="Гемипарез — благоприятный моторный прогноз 72%">
                   <td><code>pat_01K2J3M4N5P6Q7</code></td>
-                  <td>2019</td><td>M</td><td>G80.9</td>
+                  <td>2019</td><td>M</td><td>G80.2</td>
+                  <td><span class="badge-cohort hemi" data-tip="Моторный исход (GMFM, общая функция)">Motor</span></td>
+                  <td><span class="badge-ml high" data-tip="Благоприятный моторный исход — 72%">Favorable 72%</span></td>
                   <td style="font-family:var(--font-mono);font-size:0.78rem">2026-07-01</td>
                   <td><span class="status-dot green"></span>Active</td>
                 </tr>
-                <tr>
+                <tr data-tip="Гемипарез — прогноз Δ активной супинации +18°">
+                  <td><code>pat_01M4N6P8Q0R2S4</code></td>
+                  <td>2021</td><td>F</td><td>G80.2</td>
+                  <td><span class="badge-cohort tors" data-tip="Rule-based алгоритм (Sakellarides-Strecker), не ML">Torsional</span></td>
+                  <td><span class="badge-ml high" data-tip="Алгоритм: Δ активной супинации +18°">Δ sup +18°</span></td>
+                  <td style="font-family:var(--font-mono);font-size:0.78rem">2026-06-22</td>
+                  <td><span class="status-dot green"></span>Active</td>
+                </tr>
+                <tr data-tip="Гемипарез — умеренный моторный прогноз">
                   <td><code>pat_01J8X2Y4Z6W1A3</code></td>
-                  <td>2017</td><td>F</td><td>&mdash;</td>
+                  <td>2017</td><td>F</td><td>G80.2</td>
+                  <td><span class="badge-cohort hemi" data-tip="Моторный исход">Motor</span></td>
+                  <td><span class="badge-ml medium" data-tip="Умеренный моторный исход — 54%">Moderate 54%</span></td>
                   <td style="font-family:var(--font-mono);font-size:0.78rem">2026-06-28</td>
                   <td><span class="status-dot amber"></span>Review</td>
                 </tr>
-                <tr>
+                <tr data-tip="Торсионный прогноз в очереди">
                   <td><code>pat_01H5A3B7C9D2E4</code></td>
-                  <td>2020</td><td>M</td><td>G93.1</td>
+                  <td>2020</td><td>M</td><td>G80.2</td>
+                  <td><span class="badge-cohort tors" data-tip="Торсионные измерения">Torsional</span></td>
+                  <td><span class="badge-ml pending" data-tip="Ожидает расчёта торсионного алгоритма">Queued</span></td>
                   <td style="font-family:var(--font-mono);font-size:0.78rem">2026-06-15</td>
                   <td><span class="status-dot green"></span>Active</td>
                 </tr>
-                <tr>
+                <tr data-tip="Гемипарез — низкий моторный прогноз">
                   <td><code>pat_01G9F2H4J6K8L0</code></td>
-                  <td>2018</td><td>F</td><td>G80.0</td>
+                  <td>2018</td><td>F</td><td>G80.2</td>
+                  <td><span class="badge-cohort hemi" data-tip="Моторный исход">Motor</span></td>
+                  <td><span class="badge-ml low" data-tip="Неблагоприятный моторный исход — 38%">Watch 38%</span></td>
                   <td style="font-family:var(--font-mono);font-size:0.78rem">2026-06-02</td>
+                  <td><span class="status-dot green"></span>Active</td>
+                </tr>
+                <tr data-tip="Гемипарез — сильный прогноз Δ пассивной супинации +22°">
+                  <td><code>pat_01L7K9M1N3P5Q7</code></td>
+                  <td>2022</td><td>M</td><td>G80.2</td>
+                  <td><span class="badge-cohort tors" data-tip="Торсионные измерения">Torsional</span></td>
+                  <td><span class="badge-ml high" data-tip="Прогноз Δ пассивной супинации +22°">Δ sup +22°</span></td>
+                  <td style="font-family:var(--font-mono);font-size:0.78rem">2026-05-18</td>
                   <td><span class="status-dot green"></span>Active</td>
                 </tr>
               </tbody>
@@ -721,86 +1118,563 @@
   <section id="page-profile" class="page" aria-label="Neural Profile preview">
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="sidebar-brand">NEUROATLAS</div>
-        <div class="nav-item"><span>Command Center</span></div>
-        <div class="nav-item active"><span>Patients Registry</span></div>
-        <div class="nav-item"><span>Session Matrix</span></div>
+        <div class="sidebar-brand" data-tip="Название системы NeuroAtlas AI" data-tip-pos="right">NEUROATLAS</div>
+        <div class="nav-item" data-tip="Главная панель" data-tip-pos="right"><span>Command Center</span></div>
+        <div class="nav-item active" data-tip="Реестр пациентов" data-tip-pos="right"><span>Patients Registry</span></div>
+        <div class="nav-item" data-tip="Сессия и права" data-tip-pos="right"><span>Session Matrix</span></div>
       </aside>
       <div class="main-area">
         <header class="topbar">
-          <span class="topbar-title">NEURAL PROFILE</span>
+          <span class="topbar-title" data-tip="Детальная карточка пациента с ML и LLM">NEURAL PROFILE</span>
           <div class="topbar-user">
-            <span class="role-chip">CLINICIAN</span>
+            <span class="role-chip" data-tip="Роль clinician — доступ к клиническим данным">CLINICIAN</span>
           </div>
         </header>
         <div class="content">
           <div class="profile-hero">
-            <div class="profile-id">pat_01K2J3M4N5P6Q7</div>
-            <div class="profile-meta">Born 2019 &middot; Male &middot; Diagnosis G80.9 (Cerebral palsy, unspecified)</div>
+            <div class="profile-id" data-tip="Уникальный ID пациента в системе">pat_01K2J3M4N5P6Q7</div>
+            <div class="profile-meta" data-tip="Демографические данные и основной диагноз (МКБ-10)">Born 2019 &middot; Male &middot; Diagnosis G80.2 (Spastic hemiplegic cerebral palsy)</div>
           </div>
-          <div class="tab-strip">
-            <div class="tab active">Overview</div>
-            <div class="tab">Assessments</div>
-            <div class="tab locked">Predictions (Phase 2)</div>
+          <div class="tab-strip" role="tablist" aria-label="Neural profile sections">
+            <div class="tab profile-tab" role="tab" data-profile-tab="overview" data-tip="Общая информация о пациенте">Overview</div>
+            <div class="tab profile-tab" role="tab" data-profile-tab="assessments" data-tip="История клинических оценок">Assessments</div>
+            <div class="tab profile-tab active" role="tab" data-profile-tab="predictions" data-tip="ML + торсионный алгоритм">Predictions</div>
+            <div class="tab profile-tab" role="tab" data-profile-tab="evidence" data-tip="RAG + LLM доказательная база">Evidence (LLM)</div>
           </div>
+
+          <!-- ── OVERVIEW ── -->
+          <div id="profile-panel-overview" class="profile-tab-panel" role="tabpanel">
+            <div class="model-strip" aria-label="Overview sections">
+              <button type="button" class="model-chip active" data-overview="demographics" data-tip="Демография и диагноз">Demographics</button>
+              <button type="button" class="model-chip" data-overview="careplan" data-tip="План реабилитации">Care plan</button>
+              <button type="button" class="model-chip" data-overview="timeline" data-tip="Хронология событий">Timeline</button>
+            </div>
+            <div id="overview-demographics" class="profile-sub-panel active">
+              <div class="overview-grid">
+                <div class="panel" style="margin:0" data-tip="Основные данные пациента">
+                  <h3>Patient demographics</h3>
+                  <div class="kv-row"><span>Sex</span><span>Male</span></div>
+                  <div class="kv-row"><span>Year of birth</span><span>2019</span></div>
+                  <div class="kv-row"><span>Affected side</span><span>Right (R)</span></div>
+                  <div class="kv-row"><span>Diagnosis (ICD-10)</span><span>G80.2</span></div>
+                  <div class="kv-row"><span>CP form</span><span>Hemiparesis</span></div>
+                  <div class="kv-row"><span>Registered</span><span>2026-07-01</span></div>
+                </div>
+                <div class="panel" style="margin:0" data-tip="Клинический контекст">
+                  <h3>Clinical context</h3>
+                  <div class="kv-row"><span>GMFCS</span><span>II</span></div>
+                  <div class="kv-row"><span>MACS</span><span>II</span></div>
+                  <div class="kv-row"><span>Primary goal</span><span>Upper-limb function</span></div>
+                  <div class="kv-row"><span>Therapy</span><span>4 h / week</span></div>
+                  <div class="kv-row"><span>Caregiver</span><span>On file</span></div>
+                  <div class="kv-row"><span>Clinician</span><span>dr.sokolov@clinic.org</span></div>
+                </div>
+              </div>
+            </div>
+            <div id="overview-careplan" class="profile-sub-panel">
+              <div class="panel" data-tip="Текущие цели реабилитации">
+                <h3>Active care plan</h3>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem">Review date: 2026-08-01 &middot; Hemiplegic CP · right side</p>
+                <div class="activity-row" data-tip="Моторная цель — GMFM"><span><strong>Motor:</strong> Improve GMFM-66 D&amp;E score by ≥5 points in 6 months</span><span class="badge-cohort hemi">ML tracked</span></div>
+                <div class="activity-row" data-tip="Торсионная цель — PT transfer candidacy"><span><strong>Torsional:</strong> Evaluate PT transfer candidacy; target Δ active supination +15°</span><span class="badge-cohort tors">Algorithm</span></div>
+                <div class="activity-row" style="border:none" data-tip="CIMT рассматривается"><span><strong>Adjunct:</strong> Consider CIMT if MACS II maintained · evidence [2]</span><span style="font-size:0.72rem;color:var(--text-muted)">LLM suggested</span></div>
+              </div>
+            </div>
+            <div id="overview-timeline" class="profile-sub-panel">
+              <div class="panel" data-tip="Ключевые события по пациенту">
+                <h3>Event timeline</h3>
+                <div class="timeline-item"><time>2026-07-07</time><span>Motor ML prediction completed &middot; 72% favorable</span></div>
+                <div class="timeline-item"><time>2026-07-06</time><span>Torsional algorithm evaluated &middot; Δ sup +18°</span></div>
+                <div class="timeline-item"><time>2026-07-03</time><span>Motor assessment recorded &middot; <code>asm_01K2J8M4N5P6</code></span></div>
+                <div class="timeline-item"><time>2026-06-28</time><span>Torsional pre-op measurements &middot; <code>asm_01H5A3B7C9D2</code></span></div>
+                <div class="timeline-item"><time>2026-07-01</time><span>Patient registered &middot; <code>pat_01K2J3M4N5P6Q7</code></span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── ASSESSMENTS ── -->
+          <div id="profile-panel-assessments" class="profile-tab-panel" role="tabpanel">
+            <div class="model-strip" aria-label="Assessment types">
+              <button type="button" class="model-chip active" data-assessment="motor" data-tip="Моторные оценки (GMFM, GMFCS, MACS)">Motor</button>
+              <button type="button" class="model-chip torsional" data-assessment="torsional" data-tip="Торсионные измерения pre-op">Torsional</button>
+              <button type="button" class="model-chip" data-assessment="all" data-tip="Все assessments">All</button>
+            </div>
+            <div id="assess-motor" class="profile-sub-panel active">
+              <div class="panel" style="padding:0;overflow:hidden">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th data-tip="ID assessment (asm_)">Assessment ID</th>
+                      <th>Date</th>
+                      <th>GMFM-66</th>
+                      <th>GMFCS</th>
+                      <th>MACS</th>
+                      <th>Ashworth</th>
+                      <th>Therapy h/wk</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-tip="Baseline motor assessment">
+                      <td><code>asm_01K2J8M4N5P6Q7</code></td>
+                      <td>2026-07-03</td><td>52</td><td>II</td><td>II</td><td>2.0</td><td>4</td>
+                    </tr>
+                    <tr data-tip="Intake assessment">
+                      <td><code>asm_01J7H6G5F4E3D2</code></td>
+                      <td>2026-07-01</td><td>48</td><td>II</td><td>II</td><td>2.2</td><td>3</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div id="assess-torsional" class="profile-sub-panel">
+              <div class="panel" style="padding:0;overflow:hidden">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Assessment ID</th>
+                      <th>Date</th>
+                      <th>Gschwind-Tonkin</th>
+                      <th>Active sup (°)</th>
+                      <th>Passive sup (°)</th>
+                      <th>Rest pos (°)</th>
+                      <th>Cup test</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-tip="Pre-op torsional bundle for algorithm">
+                      <td><code>asm_01H5A3B7C9D2E4</code></td>
+                      <td>2026-06-28</td><td>II</td><td>−38</td><td>−28</td><td>−30</td><td>No</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div id="assess-all" class="profile-sub-panel">
+              <div class="panel" style="padding:0;overflow:hidden">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Assessment ID</th>
+                      <th>Date</th>
+                      <th>Type</th>
+                      <th>Summary</th>
+                      <th>Used by</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><code>asm_01K2J8M4N5P6Q7</code></td><td>2026-07-03</td><td><span class="badge-cohort hemi">Motor</span></td><td>GMFM 52 · GMFCS II · MACS II</td><td>ML motor</td></tr>
+                    <tr><td><code>asm_01H5A3B7C9D2E4</code></td><td>2026-06-28</td><td><span class="badge-cohort tors">Torsional</span></td><td>GT II · sup −38/−28°</td><td>Algorithm</td></tr>
+                    <tr><td><code>asm_01J7H6G5F4E3D2</code></td><td>2026-07-01</td><td><span class="badge-cohort hemi">Motor</span></td><td>GMFM 48 · intake</td><td>ML motor</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PREDICTIONS ── -->
+          <div id="profile-panel-predictions" class="profile-tab-panel active" role="tabpanel">
+          <div class="model-strip" aria-label="Prediction target selector">
+            <button type="button" class="model-chip active" data-model="hemiparesis" data-tip="Общий моторный исход — GMFM, MACS, функция">Motor outcome</button>
+            <button type="button" class="model-chip torsional" data-model="torsional" data-tip="Rule-based алгоритм — Δ супинация, положение покоя (Group A, без ML)">Torsional &middot; algorithm</button>
+          </div>
+          <div class="prediction-hero">
+            <div id="pred-hemiparesis" class="prediction-block active">
+              <div class="score-ring" data-tip="Кольцевой индикатор вероятности благоприятного моторного исхода">
+                <div class="pct" id="h-out-pct" data-tip="Вероятность благоприятного моторного исхода за 6 месяцев">72%</div>
+                <div class="caption" data-tip="Горизонт прогноза — 6 месяцев реабилитации">Favorable motor outcome<br />(6-month horizon)</div>
+                <p class="model-tag" style="margin-top:0.75rem" data-tip="Модель XGBoost hemiparesis v3.3">XGBoost hemiparesis v3.3 &middot; <span id="h-out-status">prediction-completed</span></p>
+              </div>
+              <div class="panel" style="margin:0">
+                <h3 data-tip="SHAP — вклад признаков гемипареза в прогноз">Top SHAP drivers</h3>
+                <div class="shap-row" data-tip="Базовый балл GMFM-66"><span>GMFM-66 baseline</span><div class="shap-bar"><div class="shap-fill" id="shap-bar-gmfm" style="width:88%"></div></div><span id="shap-val-gmfm">+0.21</span></div>
+                <div class="shap-row" data-tip="MACS pre-op"><span>MACS pre-op</span><div class="shap-bar"><div class="shap-fill" id="shap-bar-macs" style="width:72%"></div></div><span id="shap-val-macs">+0.17</span></div>
+                <div class="shap-row" data-tip="Возраст при поступлении"><span>Age at intake</span><div class="shap-bar"><div class="shap-fill" id="shap-bar-age" style="width:62%"></div></div><span id="shap-val-age">+0.14</span></div>
+                <div class="shap-row" data-tip="Spasticity (Ashworth)"><span>Spasticity (Ashworth)</span><div class="shap-bar"><div class="shap-fill negative" id="shap-bar-ashworth" style="width:45%"></div></div><span id="shap-val-ashworth">-0.09</span></div>
+                <div class="shap-row" data-tip="Активная супинация pre-op"><span>Active supination pre</span><div class="shap-bar"><div class="shap-fill" id="shap-bar-supination" style="width:42%"></div></div><span id="shap-val-supination">+0.08</span></div>
+              </div>
+            </div>
+            <div id="pred-torsional" class="prediction-block">
+              <div class="score-ring" data-tip="Детерминированный расчёт алгоритма — не ML-прогноз">
+                <div class="pct" style="color:var(--bio-green);font-size:2rem" id="t-out-active" data-tip="Ожидаемая Δ активной супинации по правилам">+18°</div>
+                <div class="caption" data-tip="Расчёт по Sakellarides-Strecker / Gschwind-Tonkin">Δ active supination<br />(algorithm output)</div>
+                <p class="algo-tag" style="margin-top:0.75rem" data-tip="Клинический rule engine · Group A · без XGBoost">Sakellarides-Strecker v2.1 &middot; rule-evaluated</p>
+                <p style="font-family:var(--font-mono);font-size:0.62rem;color:var(--text-muted);margin-top:0.5rem;text-align:center" id="t-out-secondary" data-tip="Дополнительные выходы алгоритма">
+                  Δ passive +14° &middot; Δ resting +12°
+                </p>
+              </div>
+              <div class="panel" style="margin:0">
+                <h3 data-tip="Входные правила алгоритма — pass/warn, не SHAP">Rule evaluation</h3>
+                <div class="rule-row" data-tip="Gschwind-Tonkin ≤ III — кандидат на PT transfer"><span>Gschwind-Tonkin pre ≤ III</span><span class="rule-pass" id="rule-gt">PASS · II</span></div>
+                <div class="rule-row" data-tip="Пассивная супинация pre ≥ −35°"><span>Passive supination pre ≥ −35°</span><span class="rule-pass" id="rule-passive">PASS · −28°</span></div>
+                <div class="rule-row" data-tip="MACS ≤ III для функционального исхода"><span>MACS pre ≤ III</span><span class="rule-pass" id="rule-macs">PASS · II</span></div>
+                <div class="rule-row" data-tip="Возраст на операции — предупреждение если &gt; 12 лет"><span>Age at surgery ≤ 12 y</span><span class="rule-warn" id="rule-age">WARN · 14 y</span></div>
+                <div class="rule-row" data-tip="Cup test = No — типичный критерий для transfer"><span>Cup test = No</span><span class="rule-pass" id="rule-cup">PASS</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="motor-input-section" class="panel measurement-input-section visible" aria-label="Hemiparesis motor assessment input">
+            <h3 data-tip="Клинические данные для ML-прогноза моторного исхода">Hemiparesis assessment input</h3>
+            <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem" data-tip="Признаки для XGBoost + SHAP (PatientFeatures + GMFM)">
+              Enter assessment values &middot; XGBoost motor outcome &middot; hemiplegic CP (G80.2)
+            </p>
+            <form id="motor-form" class="clinical-form" autocomplete="off">
+              <div class="form-field" data-tip="Пораженная сторона">
+                <label for="h-side">Side</label>
+                <select id="h-side" name="side" class="motor-field">
+                  <option value="R" selected>Right (R)</option>
+                  <option value="L">Left (L)</option>
+                </select>
+              </div>
+              <div class="form-field" data-tip="Возраст при поступлении (лет)">
+                <label for="h-age">Age at intake (y)</label>
+                <input id="h-age" name="age_years" class="motor-field" type="number" step="0.1" min="1" max="18" value="7" />
+              </div>
+              <div class="form-field" data-tip="GMFCS (I–V) — Gross Motor Function Classification">
+                <label for="h-gmfcs">GMFCS</label>
+                <select id="h-gmfcs" name="gmfcs" class="motor-field">
+                  <option value="1">I</option>
+                  <option value="2" selected>II</option>
+                  <option value="3">III</option>
+                  <option value="4">IV</option>
+                  <option value="5">V</option>
+                </select>
+              </div>
+              <div class="form-field" data-tip="GMFM-66 baseline — основной моторный показатель">
+                <label for="h-gmfm">GMFM-66 baseline</label>
+                <input id="h-gmfm" name="gmfm_66" class="motor-field" type="number" min="0" max="100" value="52" />
+              </div>
+              <div class="form-field" data-tip="MACS (I–V) — Manual Ability Classification">
+                <label for="h-macs">MACS</label>
+                <select id="h-macs" name="macs" class="motor-field">
+                  <option value="1">I</option>
+                  <option value="2" selected>II</option>
+                  <option value="3">III</option>
+                  <option value="4">IV</option>
+                  <option value="5">V</option>
+                </select>
+              </div>
+              <div class="form-field" data-tip="Средний балл Ashworth (0–4)">
+                <label for="h-ashworth">Ashworth mean (0–4)</label>
+                <input id="h-ashworth" name="ashworth_mean" class="motor-field" type="number" step="0.1" min="0" max="4" value="2.0" />
+              </div>
+              <div class="form-field" data-tip="Средний ROM (градусы) — общая подвижность">
+                <label for="h-rom">ROM mean (°)</label>
+                <input id="h-rom" name="rom_mean" class="motor-field" type="number" step="1" min="0" max="180" value="88" />
+              </div>
+              <div class="form-field" data-tip="Часов терапии в неделю">
+                <label for="h-therapy">Therapy hours / week</label>
+                <input id="h-therapy" name="therapy_hours" class="motor-field" type="number" step="0.5" min="0" max="40" value="4" />
+              </div>
+              <div class="form-field" data-tip="Активная супинация (градусы) — доп. признак гемипареза">
+                <label for="h-active">Active supination (°)</label>
+                <input id="h-active" name="active_supination" class="motor-field" type="number" step="1" value="-38" />
+              </div>
+              <div class="form-field" data-tip="Форма ДЦП — гемипарез">
+                <label for="h-cp">CP form</label>
+                <select id="h-cp" name="cp_form" class="motor-field" disabled>
+                  <option value="hemiparesis" selected>Hemiparesis (гемипарез)</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button class="btn-ghost" type="button" id="h-run-ml" style="color:var(--neon-cyan);border-color:var(--neon-cyan)" data-tip="Запустить ML-прогноз на введённых данных">&#9654;&nbsp; Run ML prediction</button>
+                <button class="btn-ghost" type="reset" data-tip="Сбросить к демо-значениям">Reset</button>
+                <span class="form-hint" data-tip="Демо: упрощённый logistic + SHAP на клиенте">Demo &middot; client-side ML preview</span>
+              </div>
+            </form>
+          </div>
+
+          <div id="torsional-input-section" class="panel measurement-input-section" aria-label="Torsional measurements input">
+            <h3 data-tip="Pre-op измерения для rule engine (Group A classic cohort)">Torsional measurements input</h3>
+            <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:1rem" data-tip="Поля соответствуют group_a_classic.csv — ввод клинициста перед расчётом алгоритма">
+              Enter pre-operative values &middot; Sakellarides-Strecker rule engine &middot; not ML
+            </p>
+            <form id="torsional-form" class="clinical-form" autocomplete="off">
+              <div class="form-field" data-tip="Пораженная сторона (Сторона)">
+                <label for="t-side">Side</label>
+                <select id="t-side" name="side">
+                  <option value="R" selected>Right (R)</option>
+                  <option value="L">Left (L)</option>
+                </select>
+              </div>
+              <div class="form-field" data-tip="Возраст на момент операции (лет)">
+                <label for="t-age">Age at surgery (y)</label>
+                <input id="t-age" name="age_years" type="number" step="0.1" min="1" max="25" value="14" />
+              </div>
+              <div class="form-field" data-tip="Срок наблюдения после операции (мес) — для контекста">
+                <label for="t-fu">Follow-up (mo)</label>
+                <input id="t-fu" name="follow_up_months" type="number" min="1" max="36" value="14" />
+              </div>
+              <div class="form-field" data-tip="MACS pre — Manual Ability Classification System (I–V)">
+                <label for="t-macs">MACS pre</label>
+                <select id="t-macs" name="macs_pre">
+                  <option value="1">I</option>
+                  <option value="2" selected>II</option>
+                  <option value="3">III</option>
+                  <option value="4">IV</option>
+                  <option value="5">V</option>
+                </select>
+              </div>
+              <div class="form-field" data-tip="Gschwind-Tonkin pre (I–V)">
+                <label for="t-gt">Gschwind-Tonkin pre</label>
+                <select id="t-gt" name="gschwind_tonkin">
+                  <option value="1">I</option>
+                  <option value="2" selected>II</option>
+                  <option value="3">III</option>
+                  <option value="4">IV</option>
+                  <option value="5">V</option>
+                </select>
+              </div>
+              <div class="form-field" data-tip="House pre — функциональная шкала (1–5)">
+                <label for="t-house">House pre</label>
+                <input id="t-house" name="house_pre" type="number" min="1" max="5" value="3" />
+              </div>
+              <div class="form-field" data-tip="Активная супинация pre (градусы, обычно отрицательные)">
+                <label for="t-active">Active supination pre (°)</label>
+                <input id="t-active" name="active_supination_pre" type="number" step="1" value="-38" />
+              </div>
+              <div class="form-field" data-tip="Пассивная супинация pre (градусы)">
+                <label for="t-passive">Passive supination pre (°)</label>
+                <input id="t-passive" name="passive_supination_pre" type="number" step="1" value="-28" />
+              </div>
+              <div class="form-field" data-tip="Положение покоя pre (градусы)">
+                <label for="t-rest">Resting position pre (°)</label>
+                <input id="t-rest" name="resting_position_pre" type="number" step="1" value="-30" />
+              </div>
+              <div class="form-field" data-tip="Чашка pre — cup test (да/нет)">
+                <label for="t-cup">Cup test pre</label>
+                <select id="t-cup" name="cup_pre">
+                  <option value="no" selected>No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button class="btn-ghost" type="button" id="t-run-algo" style="color:var(--neon-magenta);border-color:var(--neon-magenta)" data-tip="Запустить rule engine на введённых данных">&#9654;&nbsp; Run algorithm</button>
+                <button class="btn-ghost" type="reset" data-tip="Сбросить к демо-значениям">Reset</button>
+                <span class="form-hint" data-tip="Демо: упрощённый расчёт на клиенте">Demo &middot; client-side rule preview</span>
+              </div>
+            </form>
+          </div>
+
           <div class="panel">
-            <h3>Clinical Summary</h3>
-            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem">
-              Registered 2026-07-01 &middot; 0 assessments recorded &middot; No ML predictions yet
+            <h3 data-tip="Краткая сводка прогнозов">Prediction summary</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem" data-tip="Motor = ML; Torsional = rule engine">
+              Motor ML 2026-07-07 11:32 &middot; 72% favorable &middot; Torsional algo 2026-07-06 09:15 &middot; Δ sup +18°
             </p>
-            <div class="sparkline" aria-hidden="true"></div>
-            <p style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted)">
-              Recovery trajectory placeholder &mdash; live data in Phase 2
-            </p>
+            <div class="sparkline" aria-hidden="true" data-tip="Демо-график траектории"></div>
+          </div>
+          </div>
+
+          <!-- ── EVIDENCE (LLM) ── -->
+          <div id="profile-panel-evidence" class="profile-tab-panel" role="tabpanel">
+            <div class="model-strip" aria-label="Evidence topics">
+              <button type="button" class="model-chip active" data-evidence="motor" data-tip="RAG по моторному исходу">Motor RAG</button>
+              <button type="button" class="model-chip torsional" data-evidence="torsional" data-tip="RAG по PT transfer / торсионным">Torsional RAG</button>
+              <button type="button" class="model-chip" data-evidence="summary" data-tip="Полное LLM-резюме">LLM summary</button>
+            </div>
+            <div id="evidence-motor" class="profile-sub-panel active">
+              <div class="panel" data-tip="LLM snippet — motor outcome literature">
+                <h3>Motor outcome evidence</h3>
+                <p style="font-size:0.85rem;line-height:1.55;color:var(--text-primary);margin-bottom:0.75rem">
+                  For hemiplegic CP with GMFM-66 &gt; 45 at intake, intensive task-specific training and
+                  constraint-induced movement show meaningful upper-limb gains over 6 months
+                  <span class="citation">[1]</span><span class="citation">[2]</span>.
+                </p>
+                <div class="activity-row" style="flex-direction:column;align-items:flex-start;gap:0.25rem;border:none">
+                  <span><span class="citation">[1]</span> Novak et al. — Early intervention CP</span>
+                  <span style="font-size:0.72rem;color:var(--text-muted)">Similarity 0.89 &middot; chunk asm_01K...</span>
+                </div>
+                <div class="activity-row" style="flex-direction:column;align-items:flex-start;gap:0.25rem;border:none">
+                  <span><span class="citation">[2]</span> Eliasson et al. — CIMT hemiplegic CP</span>
+                  <span style="font-size:0.72rem;color:var(--text-muted)">Similarity 0.86 &middot; chunk asm_01J...</span>
+                </div>
+              </div>
+            </div>
+            <div id="evidence-torsional" class="profile-sub-panel">
+              <div class="panel" data-tip="LLM snippet — PT transfer / algorithm criteria">
+                <h3>Torsional / PT transfer evidence</h3>
+                <p style="font-size:0.85rem;line-height:1.55;color:var(--text-primary);margin-bottom:0.75rem">
+                  Pronator teres transfer candidacy follows Sakellarides-Strecker criteria: Gschwind-Tonkin grade,
+                  passive supination ROM, MACS, and cup test. Expected Δ supination is computed by the clinical
+                  rule engine — not ML
+                  <span class="citation">[3]</span><span class="citation">[4]</span>.
+                </p>
+                <div class="activity-row" style="flex-direction:column;align-items:flex-start;gap:0.25rem;border:none">
+                  <span><span class="citation">[3]</span> Sakellarides — PT transfer outcomes</span>
+                  <span style="font-size:0.72rem;color:var(--text-muted)">Rule source &middot; chunk asm_01M...</span>
+                </div>
+                <div class="activity-row" style="flex-direction:column;align-items:flex-start;gap:0.25rem;border:none">
+                  <span><span class="citation">[4]</span> Strecker — Supination outcomes review</span>
+                  <span style="font-size:0.72rem;color:var(--text-muted)">Similarity 0.84 &middot; chunk asm_01H...</span>
+                </div>
+              </div>
+            </div>
+            <div id="evidence-summary" class="profile-sub-panel">
+              <div class="panel chat-panel" style="min-height:auto" data-tip="Сводный LLM-ответ для клинициста">
+                <h3>LLM clinical summary</h3>
+                <div class="chat-bubble assistant" style="max-width:100%;margin-top:0.5rem">
+                  <strong style="color:var(--neon-cyan)">Patient pat_01K2J3M4N5P6Q7 · G80.2 hemiparesis</strong><br /><br />
+                  <strong>Motor (ML 72%):</strong> Favorable 6-month upper-limb outlook. GMFM baseline and MACS II
+                  are primary positive drivers; Ashworth mildly negative
+                  <span class="citation">[1]</span>. Consider maintaining 4 h/week therapy intensity.<br /><br />
+                  <strong>Torsional (algo +18°):</strong> Meets most Sakellarides-Strecker criteria; age at surgery
+                  triggers WARN. Algorithm expects meaningful Δ active supination if PT transfer proceeds
+                  <span class="citation">[3]</span><span class="citation">[4]</span>.<br /><br />
+                  <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted)">Generated 2026-07-07 · LLM Orchestrator + pgvector RAG · demo text</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PAGE 5: AI COPILOT (LLM + ML) ═══ -->
+  <section id="page-ai" class="page" aria-label="AI Copilot preview">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand" data-tip="Название системы NeuroAtlas AI" data-tip-pos="right">NEUROATLAS</div>
+        <div class="nav-item" data-tip="Главная панель" data-tip-pos="right"><span>Command Center</span></div>
+        <div class="nav-item" data-tip="Реестр пациентов" data-tip-pos="right"><span>Patients Registry</span></div>
+        <div class="nav-item active" data-tip="ИИ-ассистент с RAG и ML-контекстом" data-tip-pos="right"><span>AI Copilot</span></div>
+        <div class="nav-item" data-tip="Сессия и права" data-tip-pos="right"><span>Session Matrix</span></div>
+      </aside>
+      <div class="main-area">
+        <header class="topbar">
+          <span class="topbar-title" data-tip="Чат с ИИ: доказательная база + ML-прогнозы">AI COPILOT &middot; EVIDENCE + PREDICTIONS</span>
+          <div class="topbar-user">
+            <span class="role-chip" data-tip="Роль clinician">CLINICIAN</span>
+            <span data-tip="Текущий пользователь">dr.sokolov@clinic.org</span>
+          </div>
+        </header>
+        <div class="content">
+          <p style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);margin-bottom:1rem" data-tip="Motor = XGBoost ML; Torsional = clinical algorithm">
+            Patient context: <code>pat_01K2J3M4N5P6Q7</code> &middot; G80.2 hemiparesis &middot; motor ML + torsional algo &middot; RAG demo (static)
+          </p>
+          <div class="model-strip" style="margin-bottom:1rem">
+            <span class="model-chip active" style="cursor:default" data-tip="ML + algorithm в одном ответе">Both targets</span>
+            <span class="model-chip" style="cursor:default;opacity:0.6" data-tip="Только ML моторный исход">Motor ML only</span>
+            <span class="model-chip torsional" style="cursor:default;opacity:0.6" data-tip="Только торсионный алгоритм">Torsional algo only</span>
+          </div>
+          <div class="ai-grid">
+            <div class="panel chat-panel">
+              <h3 data-tip="LLM: ML-прогноз + rule-based торсионный расчёт + RAG">Ask NeuroAtlas (LLM + RAG)</h3>
+              <div class="chat-log">
+                <div class="chat-bubble user" data-tip="Вопрос: ML для моторного, алгоритм для торсионных">
+                  For this hemiparesis patient — motor ML outlook and torsional algorithm result after PT transfer?
+                </div>
+                <div class="chat-bubble assistant" data-tip="Motor = ML+SHAP; Torsional = rule evaluation">
+                  <strong style="color:var(--neon-magenta)">Evidence summary</strong><br /><br />
+                  <strong style="color:var(--neon-cyan)">Motor outcome (ML):</strong> Higher baseline GMFM and younger age correlate with better 6-month upper-limb gains
+                  <span class="citation" data-tip="Цитата [1]">[1]</span>. CIMT shows moderate effect sizes
+                  <span class="citation" data-tip="Цитата [2]">[2]</span>.<br /><br />
+                  <strong style="color:var(--neon-magenta)">Torsional (algorithm):</strong> Sakellarides-Strecker rules evaluate Gschwind-Tonkin, passive supination,
+                  MACS, and cup test. No ML — deterministic Δ supination from clinical criteria
+                  <span class="citation" data-tip="Цитата [3]">[3]</span><span class="citation" data-tip="Цитата [4]">[4]</span>.<br /><br />
+                  <strong style="color:var(--neon-cyan)">Results</strong><br />
+                  Motor ML: <strong>72%</strong> favorable (GMFM, MACS, SHAP on Neural Profile).<br />
+                  Torsional algo: <strong>+18°</strong> Δ active supination (4/5 rules PASS; age WARN). See Rule evaluation on Neural Profile.
+                </div>
+              </div>
+              <div class="chat-input-row">
+                <input type="text" placeholder="Ask about evidence, outcomes, or treatment options..." readonly data-tip="Поле ввода вопроса (демо — только чтение)" />
+                <button class="btn-ghost" type="button" style="color:var(--neon-cyan);border-color:var(--neon-cyan)" data-tip="Отправить вопрос в LLM Orchestrator">Send</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1rem">
+              <div class="score-ring" data-tip="ML-прогноз + результат алгоритма">
+                <div style="display:flex;gap:1.5rem;align-items:center">
+                  <div style="text-align:center" data-tip="ML — моторный исход">
+                    <div class="pct" style="font-size:1.6rem">72%</div>
+                    <div class="caption" style="font-size:0.58rem">Motor ML</div>
+                  </div>
+                  <div style="text-align:center" data-tip="Algorithm — Δ супинации">
+                    <div class="pct" style="font-size:1.6rem;color:var(--bio-green)">+18°</div>
+                    <div class="caption" style="font-size:0.58rem">Torsional algo</div>
+                  </div>
+                </div>
+                <div class="caption" style="margin-top:0.75rem" data-tip="ML + rule engine, не две ML-модели">ML + algorithm scores</div>
+              </div>
+              <div class="panel" style="flex:1;margin:0">
+                <h3 data-tip="Статьи по моторному исходу и PT transfer">Retrieved citations</h3>
+                <div class="activity-row" style="flex-direction:column;align-items:flex-start;gap:0.25rem" data-tip="Motor [1]">
+                  <span><span class="badge-cohort hemi" style="margin-right:0.35rem">Motor</span><span class="citation">[1]</span> Novak et al. — Early intervention CP</span>
+                  <span style="font-size:0.72rem;color:var(--text-muted)">Similarity 0.89 &middot; chunk asm_01K...</span>
+                </div>
+                <div class="activity-row" style="flex-direction:column;align-items:flex-start;gap:0.25rem" data-tip="Motor [2]">
+                  <span><span class="badge-cohort hemi" style="margin-right:0.35rem">Motor</span><span class="citation">[2]</span> Eliasson et al. — CIMT hemiplegic CP</span>
+                  <span style="font-size:0.72rem;color:var(--text-muted)">Similarity 0.86 &middot; chunk asm_01J...</span>
+                </div>
+                <div class="activity-row" style="flex-direction:column;align-items:flex-start;gap:0.25rem;border:none" data-tip="Algorithm [3]">
+                  <span><span class="badge-cohort tors" style="margin-right:0.35rem">Algo</span><span class="citation">[3]</span> Sakellarides — PT transfer criteria</span>
+                  <span style="font-size:0.72rem;color:var(--text-muted)">Rule source &middot; chunk asm_01M...</span>
+                </div>
+              </div>
+              <div class="panel" style="margin:0">
+                <h3 data-tip="ML-сервис + rule engine в patients">Services (architecture)</h3>
+                <div class="pipeline-step" data-tip="ml:8002 — только мotor XGBoost + SHAP"><span class="dot"></span><span>ml:8002 &mdash; motor XGBoost + SHAP</span></div>
+                <div class="pipeline-step" data-tip="patients — торсионный rule engine"><span class="dot"></span><span>patients &mdash; torsional rule engine (no ML)</span></div>
+                <div class="pipeline-step" data-tip="search — pgvector"><span class="dot"></span><span>search &mdash; pgvector semantic retrieval</span></div>
+                <div class="pipeline-step" data-tip="LLM Orchestrator"><span class="dot"></span><span>LLM Orchestrator &mdash; RAG + citations</span></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ═══ PAGE 5: SESSION ═══ -->
+  <!-- ═══ PAGE 6: SESSION ═══ -->
   <section id="page-session" class="page" aria-label="Session Matrix preview">
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="sidebar-brand">NEUROATLAS</div>
-        <div class="nav-item"><span>Command Center</span></div>
-        <div class="nav-item"><span>Patients Registry</span></div>
-        <div class="nav-item active"><span>Session Matrix</span></div>
+        <div class="sidebar-brand" data-tip="Название системы NeuroAtlas AI" data-tip-pos="right">NEUROATLAS</div>
+        <div class="nav-item" data-tip="Главная панель" data-tip-pos="right"><span>Command Center</span></div>
+        <div class="nav-item" data-tip="Реестр пациентов" data-tip-pos="right"><span>Patients Registry</span></div>
+        <div class="nav-item" data-tip="ИИ-ассистент" data-tip-pos="right"><span>AI Copilot</span></div>
+        <div class="nav-item active" data-tip="Текущая сессия и матрица прав" data-tip-pos="right"><span>Session Matrix</span></div>
       </aside>
       <div class="main-area">
         <header class="topbar">
-          <span class="topbar-title">SESSION MATRIX</span>
+          <span class="topbar-title" data-tip="Информация о сессии и правах доступа по ролям">SESSION MATRIX</span>
           <div class="topbar-user">
-            <span class="role-chip admin">ADMIN</span>
-            <span>admin@neuroatlas.dev</span>
+            <span class="role-chip admin" data-tip="Роль admin — полный доступ к системе">ADMIN</span>
+            <span data-tip="Email администратора">admin@neuroatlas.dev</span>
           </div>
         </header>
         <div class="content">
           <div class="session-grid">
             <div class="panel identity-card">
-              <h3>Identity</h3>
-              <div class="email">admin@neuroatlas.dev</div>
-              <div class="uid">usr_01K9M2N4P6Q8R0</div>
+              <h3 data-tip="Данные пользователя из Keycloak + JIT upsert в Postgres">Identity</h3>
+              <div class="email" data-tip="Email из OIDC-токена">admin@neuroatlas.dev</div>
+              <div class="uid" data-tip="Внутренний ID пользователя (usr_ + ULID)">usr_01K9M2N4P6Q8R0</div>
               <div style="margin-top:1rem;display:flex;gap:0.5rem">
-                <span class="role-chip admin">ADMIN</span>
-                <span class="role-chip">CLINICIAN</span>
+                <span class="role-chip admin" data-tip="Роль admin — управление системой">ADMIN</span>
+                <span class="role-chip" data-tip="Роль clinician — клинический доступ">CLINICIAN</span>
               </div>
               <div style="margin-top:1.5rem;display:flex;gap:0.75rem">
-                <button class="btn-ghost" type="button">Refresh session</button>
-                <button class="btn-ghost" type="button" style="border-color:var(--alert-red);color:var(--alert-red)">Sign out</button>
+                <button class="btn-ghost" type="button" data-tip="Обновить токен и данные сессии">Refresh session</button>
+                <button class="btn-ghost" type="button" style="border-color:var(--alert-red);color:var(--alert-red)" data-tip="Завершить сессию и выйти">Sign out</button>
               </div>
             </div>
             <div class="panel">
-              <h3>Access Matrix</h3>
+              <h3 data-tip="Какие маршруты доступны каждой роли Keycloak">Access Matrix</h3>
               <table class="data-table access-matrix">
                 <thead>
-                  <tr><th>Route</th><th>clinician</th><th>admin</th><th>researcher</th></tr>
+                  <tr>
+                    <th data-tip="Путь в React SPA">Route</th>
+                    <th data-tip="Роль clinician">clinician</th>
+                    <th data-tip="Роль admin">admin</th>
+                    <th data-tip="Роль researcher">researcher</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  <tr><td>/dashboard</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="cross">&mdash;</td></tr>
-                  <tr><td>/patients</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="cross">&mdash;</td></tr>
-                  <tr><td>/session</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td></tr>
-                  <tr><td>/ml</td><td class="cross">&mdash;</td><td class="check">&#10003;</td><td class="cross">&mdash;</td></tr>
+                  <tr data-tip="Панель управления — доступна clinician и admin"><td>/dashboard</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="cross">&mdash;</td></tr>
+                  <tr data-tip="Реестр пациентов — clinician и admin"><td>/patients</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="cross">&mdash;</td></tr>
+                  <tr data-tip="Сессия — доступна всем ролям"><td>/session</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td></tr>
+                  <tr data-tip="ML-сервис — только admin"><td>/ml</td><td class="cross">&mdash;</td><td class="check">&#10003;</td><td class="cross">&mdash;</td></tr>
                 </tbody>
               </table>
             </div>
@@ -813,15 +1687,58 @@
   <!-- ═══ PAGE 5b: CALLBACK LOADER ═══ -->
   <section id="page-callback" class="page" aria-label="Auth callback loader preview">
     <div class="loader-card hud-corners">
-      <div class="loader-ring" aria-hidden="true"></div>
-      <div class="loader-title">SYNCHRONIZING SESSION</div>
-      <p style="font-size:0.85rem;color:var(--text-muted)">Verifying neural link with Keycloak...</p>
-      <div class="progress-bar"><div class="progress-fill"></div></div>
-      <p style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);margin-top:0.75rem">72%</p>
+      <div class="loader-ring" aria-hidden="true" data-tip="Анимация загрузки — обмен code на токены"></div>
+      <div class="loader-title" data-tip="Синхронизация сессии после OAuth callback">SYNCHRONIZING SESSION</div>
+      <p style="font-size:0.85rem;color:var(--text-muted)" data-tip="Проверка authorization code через Keycloak">Verifying neural link with Keycloak...</p>
+      <div class="progress-bar" data-tip="Прогресс обмена токенов и JIT upsert пользователя"><div class="progress-fill"></div></div>
+      <p style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);margin-top:0.75rem" data-tip="Примерный прогресс (демо)">72%</p>
     </div>
   </section>
 
   <script>
+    function wireSubPanels(chipSelector, dataAttr, panelPrefix) {
+      document.querySelectorAll(chipSelector).forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const key = chip.dataset[dataAttr];
+          const strip = chip.closest(".model-strip");
+          strip?.querySelectorAll(".model-chip").forEach((c) => c.classList.remove("active"));
+          chip.classList.add("active");
+          const tabPanel = strip?.closest(".profile-tab-panel");
+          tabPanel?.querySelectorAll(".profile-sub-panel").forEach((p) => p.classList.remove("active"));
+          const sub = document.getElementById(panelPrefix + "-" + key);
+          if (sub) sub.classList.add("active");
+        });
+      });
+    }
+
+    function syncPredictionInputs() {
+      const predictionsActive = document.getElementById("profile-panel-predictions")?.classList.contains("active");
+      const motorChip = document.querySelector('.model-chip[data-model="hemiparesis"]');
+      const torsionalChip = document.querySelector('.model-chip[data-model="torsional"]');
+      const motorInput = document.getElementById("motor-input-section");
+      const torsionalInput = document.getElementById("torsional-input-section");
+      const showMotor = predictionsActive && motorChip?.classList.contains("active");
+      const showTorsional = predictionsActive && torsionalChip?.classList.contains("active");
+      if (motorInput) motorInput.classList.toggle("visible", !!showMotor);
+      if (torsionalInput) torsionalInput.classList.toggle("visible", !!showTorsional);
+    }
+
+    document.querySelectorAll(".profile-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const name = tab.dataset.profileTab;
+        document.querySelectorAll(".profile-tab").forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        document.querySelectorAll(".profile-tab-panel").forEach((p) => p.classList.remove("active"));
+        const panel = document.getElementById("profile-panel-" + name);
+        if (panel) panel.classList.add("active");
+        syncPredictionInputs();
+      });
+    });
+
+    wireSubPanels("[data-overview]", "overview", "overview");
+    wireSubPanels("[data-assessment]", "assessment", "assess");
+    wireSubPanels("[data-evidence]", "evidence", "evidence");
+
     document.querySelectorAll(".demo-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
         const page = btn.dataset.page;
@@ -831,6 +1748,136 @@
         const el = document.getElementById("page-" + page);
         if (el) el.classList.add("active");
       });
+    });
+
+    document.querySelectorAll(".model-chip[data-model]").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const model = chip.dataset.model;
+        chip.closest(".model-strip")?.querySelectorAll(".model-chip").forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        document.querySelectorAll(".prediction-block").forEach((block) => block.classList.remove("active"));
+        const target = document.getElementById("pred-" + model);
+        if (target) target.classList.add("active");
+        syncPredictionInputs();
+      });
+    });
+
+    const ROMAN = ["", "I", "II", "III", "IV", "V"];
+
+    function sigmoid(x) {
+      return 1 / (1 + Math.exp(-x));
+    }
+
+    function fmtShap(v) {
+      return (v >= 0 ? "+" : "") + v.toFixed(2);
+    }
+
+    function setShap(key, contribution, ref) {
+      const bar = document.getElementById("shap-bar-" + key);
+      const val = document.getElementById("shap-val-" + key);
+      const abs = Math.abs(contribution);
+      const width = Math.min(95, Math.round((abs / ref) * 100));
+      if (bar) {
+        bar.style.width = width + "%";
+        bar.classList.toggle("negative", contribution < 0);
+      }
+      if (val) val.textContent = fmtShap(contribution);
+    }
+
+    function runMotorPrediction() {
+      const age = parseFloat(document.getElementById("h-age")?.value || "7");
+      const gmfcs = parseInt(document.getElementById("h-gmfcs")?.value || "2", 10);
+      const gmfm = parseFloat(document.getElementById("h-gmfm")?.value || "52");
+      const macs = parseInt(document.getElementById("h-macs")?.value || "2", 10);
+      const ashworth = parseFloat(document.getElementById("h-ashworth")?.value || "2");
+      const rom = parseFloat(document.getElementById("h-rom")?.value || "88");
+      const therapy = parseFloat(document.getElementById("h-therapy")?.value || "4");
+      const activeSup = parseFloat(document.getElementById("h-active")?.value || "-38");
+
+      const REF = { age: 7, gmfcs: 3, gmfm: 45, macs: 3, ashworth: 2, rom: 90, therapy: 3, activeSup: -45 };
+      const shapGmfm = (gmfm - REF.gmfm) * 0.0042;
+      const shapMacs = (REF.macs - macs) * 0.085;
+      const shapAge = (REF.age - age) * 0.02;
+      const shapAshworth = (REF.ashworth - ashworth) * 0.045;
+      const shapSup = (activeSup - REF.activeSup) * 0.003;
+      const shapRom = (rom - REF.rom) * 0.0012;
+      const shapTherapy = (therapy - REF.therapy) * 0.04;
+      const shapGmfcs = (REF.gmfcs - gmfcs) * 0.06;
+
+      setShap("gmfm", shapGmfm, 0.25);
+      setShap("macs", shapMacs, 0.25);
+      setShap("age", shapAge + shapGmfcs * 0.3, 0.25);
+      setShap("ashworth", shapAshworth, 0.15);
+      setShap("supination", shapSup + shapRom * 0.2 + shapTherapy * 0.15, 0.15);
+
+      const logit =
+        -0.2 +
+        shapGmfm * 4.5 +
+        shapMacs * 3.2 +
+        shapAge * 2.8 +
+        shapAshworth * 2.2 +
+        shapSup * 2 +
+        shapRom * 1.5 +
+        shapTherapy * 1.8 +
+        shapGmfcs * 2.5;
+      const prob = sigmoid(logit);
+      const pct = Math.round(prob * 100);
+
+      const outPct = document.getElementById("h-out-pct");
+      const outStatus = document.getElementById("h-out-status");
+      if (outPct) {
+        outPct.textContent = pct + "%";
+        outPct.style.color = pct >= 65 ? "var(--bio-green)" : pct >= 45 ? "var(--warn-amber)" : "var(--alert-red)";
+      }
+      if (outStatus) outStatus.textContent = "prediction-completed";
+    }
+
+    function setRule(el, kind, detail) {
+      if (!el) return;
+      el.textContent = detail;
+      el.className = kind === "pass" ? "rule-pass" : kind === "fail" ? "rule-fail" : "rule-warn";
+    }
+
+    function runTorsionalAlgorithm() {
+      const age = parseFloat(document.getElementById("t-age")?.value || "14");
+      const macs = parseInt(document.getElementById("t-macs")?.value || "2", 10);
+      const gt = parseInt(document.getElementById("t-gt")?.value || "2", 10);
+      const passive = parseFloat(document.getElementById("t-passive")?.value || "-28");
+      const active = parseFloat(document.getElementById("t-active")?.value || "-38");
+      const rest = parseFloat(document.getElementById("t-rest")?.value || "-30");
+      const cup = document.getElementById("t-cup")?.value || "no";
+
+      setRule(document.getElementById("rule-gt"), gt <= 3 ? "pass" : "fail", (gt <= 3 ? "PASS" : "FAIL") + " · " + ROMAN[gt]);
+      setRule(document.getElementById("rule-passive"), passive >= -35 ? "pass" : "fail", (passive >= -35 ? "PASS" : "FAIL") + " · " + passive + "°");
+      setRule(document.getElementById("rule-macs"), macs <= 3 ? "pass" : "fail", (macs <= 3 ? "PASS" : "FAIL") + " · " + ROMAN[macs]);
+      setRule(document.getElementById("rule-age"), age <= 12 ? "pass" : "warn", (age <= 12 ? "PASS" : "WARN") + " · " + age + " y");
+      setRule(document.getElementById("rule-cup"), cup === "no" ? "pass" : "warn", cup === "no" ? "PASS" : "WARN · Yes");
+
+      const passCount = [gt <= 3, passive >= -35, macs <= 3, age <= 12, cup === "no"].filter(Boolean).length;
+      const baseGain = Math.max(4, Math.round((passive + 40) * 0.45 + (3 - Math.min(gt, 3)) * 4));
+      const agePenalty = age > 12 ? Math.round((age - 12) * 1.5) : 0;
+      const deltaActive = Math.max(0, baseGain - agePenalty);
+      const deltaPassive = Math.max(0, Math.round(deltaActive * 0.78));
+      const deltaRest = Math.max(0, Math.round(deltaActive * 0.67));
+
+      const outActive = document.getElementById("t-out-active");
+      const outSecondary = document.getElementById("t-out-secondary");
+      if (outActive) {
+        outActive.textContent = "+" + deltaActive + "°";
+        outActive.style.color = passCount >= 4 ? "var(--bio-green)" : passCount >= 3 ? "var(--warn-amber)" : "var(--alert-red)";
+      }
+      if (outSecondary) {
+        outSecondary.textContent = "Δ passive +" + deltaPassive + "° · Δ resting +" + deltaRest + "° · active pre " + active + "° · rest pre " + rest + "°";
+      }
+    }
+
+    document.getElementById("h-run-ml")?.addEventListener("click", runMotorPrediction);
+    document.getElementById("motor-form")?.addEventListener("reset", () => {
+      setTimeout(runMotorPrediction, 0);
+    });
+    document.getElementById("t-run-algo")?.addEventListener("click", runTorsionalAlgorithm);
+    document.getElementById("torsional-form")?.addEventListener("reset", () => {
+      setTimeout(runTorsionalAlgorithm, 0);
     });
   </script>
 </body>

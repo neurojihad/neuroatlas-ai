@@ -67,8 +67,17 @@ up_infra:
 down_infra:
 	$(COMPOSE_INFRA) --profile storage down
 
+keycloak_ensure:
+	$(COMPOSE_INFRA) --profile storage up keycloak-init
+
+reset_keycloak:
+	-$(COMPOSE_INFRA) --profile storage rm -sf keycloak keycloak-init
+	-docker volume rm neuroatlas-infra_keycloak_data
+	$(COMPOSE_INFRA) --profile storage up -d keycloak
+	$(MAKE) keycloak_ensure
+
 kafka_topics:
-	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run --with messaging python infra/kafka/init_topics.py
+	KAFKA_BOOTSTRAP_SERVERS=localhost:9092 $(COMPOSE_ENV) poetry run python infra/kafka/init_topics.py
 
 kafka_logs:
 	docker logs -f kafka_neuroatlas
@@ -173,6 +182,9 @@ makemigration:
 
 test_k:
 	poetry run pytest src -k=${k}
+
+smoke_admin_ui:
+	SMOKE_INTEGRATION=1 poetry run pytest src/common/tests/integration -m integration -v
 
 # Poetry
 

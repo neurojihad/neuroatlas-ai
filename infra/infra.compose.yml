@@ -101,3 +101,24 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+
+  keycloak-init:
+    profiles: [storage]
+    image: python:3.12-slim
+    container_name: keycloak_init_neuroatlas
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -c
+      - pip install -q --no-cache-dir httpx && python /scripts/keycloak/ensure_realm.py
+    volumes:
+      - ./keycloak:/scripts/keycloak:ro
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    networks:
+      - neuroatlasnet
+    restart: "no"

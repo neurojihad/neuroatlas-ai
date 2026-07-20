@@ -54,6 +54,10 @@ Admin console URL: [http://localhost:8080/admin](http://localhost:8080/admin)
 > `{"error":"Realm does not exist"}`, the container was recreated **before** persistence was
 > enabled, or the volume was deleted — run `.\make.ps1 up_infra` again (realm auto-imports on
 > first start) and re-create users in Part 2 only.
+>
+> If browser login shows **Client not found** for `neuroatlas-ui`, the volume predates the
+> `neuroatlas-ui` client in import JSON — run `.\make.ps1 keycloak_ensure` (or
+> `.\make.ps1 reset_keycloak` to wipe and re-import everything).
 
 ---
 
@@ -245,6 +249,7 @@ the JWT on every request.
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `Realm does not exist` on token request | Keycloak container recreated without persisted volume; manual realm wiped | Run `.\make.ps1 up_infra` (imports realm); recreate users (Part 2); use client secret `dev-neuroatlas-api-secret` |
+| Keycloak **Client not found** (`neuroatlas-ui`) | Stale `keycloak_data` volume from before `neuroatlas-ui` was added to import JSON | Run `.\make.ps1 keycloak_ensure` (creates missing clients). Nuclear: `.\make.ps1 reset_keycloak` then recreate users |
 | `invalid_grant` / invalid credentials | Wrong password or shell mangled special chars | Reset password in Admin Console; use `--data-urlencode` |
 | `Account is not fully set up` | Required actions or unverified email | Clear **Required user actions**; set **Email verified** ON |
 | API `401` invalid token / audience | Token `aud` ≠ `OIDC_AUDIENCE` | Add **Audience** mapper (§1.4) |

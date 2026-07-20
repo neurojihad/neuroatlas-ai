@@ -3,7 +3,7 @@
 **Dates:** 6 Jul 2026 → 13 Jul 2026 (1 week)  
 **Sprint goal:** Browser login via **admin_ui** BFF (:8000) with Keycloak JWT proxy to patients; gateway stories (NLS-50..59) for traceability.
 
-**Status:** **Active** in Jira (project key `NLS`) — sprint **Sprint 02 — admin_ui Pioneer** (id **68**).
+**Status:** **Closed** in Jira (project key `NLS`) — sprint **Sprint 02 — admin_ui Pioneer** (id **68**). Superseded by [Sprint 03](sprint-03-clinical-api.md).
 
 > **Architecture note (vs PaymentGate):** NeuroAtlas does **not** exchange Keycloak → AtomID. The **same Keycloak access token** is validated at `admin_ui` / backends. Embedded React + auth handlers follow PaymentGate `admin_ui` layout. See [`auth-paymentgate-comparison.md`](../diagrams/auth-paymentgate-comparison.md).
 
@@ -83,6 +83,22 @@ Setup: [`docs/ci/self-hosted-runner.md`](../ci/self-hosted-runner.md)
 - [ ] Gateway stories linked or closed against NLS-ADMIN-* equivalents
 - [ ] `make check` green on touched packages
 - [ ] Sprint stories moved to Done in Jira; `plan.md` statuses updated
+
+---
+
+## NLS-68 — E2E smoke (admin_ui → patients + JIT)
+
+Setup and run: [`docs/smoke/admin-ui-e2e.md`](../smoke/admin-ui-e2e.md)
+
+```powershell
+# infra/.env: AUTH_ENABLED=true, SMOKE_USERNAME, SMOKE_PASSWORD
+.\make.ps1 up_infra
+.\make.ps1 migrate
+.\make.ps1 up_app
+.\make.ps1 smoke_admin_ui
+```
+
+Manual browser check: [http://localhost:8000](http://localhost:8000) → login → Patients Registry.
 
 ---
 

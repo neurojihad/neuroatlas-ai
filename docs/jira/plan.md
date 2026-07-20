@@ -99,6 +99,56 @@ project prefix. Link each ticket to [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 
 ---
 
+## Epic: NLS-EPIC-09 — Access model / RBAC (IAM service)
+
+New dedicated hexagonal service `src/iam/` (port 8004): users, roles, resources, and role-resource
+links. DB RBAC is the Phase-4 fine-grained authorization layer atop Keycloak JWT realm roles.
+Cross-links EPIC-03 (Identity & audit), EPIC-07 (Observability), and NLS-104 / NLS-506 (Redis).
+
+**Planner decisions:** D1 dedicated `src/iam/` (not `common/` or `admin_ui/`); D2 ULID string PKs with
+prefixes `usr_`/`rol_`/`res_` + `RoleResource` composite PK; D3 extend existing common `UserORM` with a
+nullable `role_id` FK → `roles` (ON DELETE SET NULL), no second users table; D4 use `AsyncSession`
+(subclass `SqlAlchemyUnitOfWork`); D5 new ORM models live in `common/adapters/database/models/` so
+housekeeper Alembic autogenerate sees them.
+
+Ready-made Jira creation script: [`scripts/jira/create_rbac_tasks.ps1`](../../scripts/jira/create_rbac_tasks.ps1)
+(supports `-DryRun`). Full titles/context/AC/labels/sizes are authoritative in that script.
+
+| Ticket | Title | Status | ARCHITECTURE.md ref |
+|--------|-------|--------|---------------------|
+| NLS-901 | Add DatabaseException adapter-layer exception | Open | §12 — layered exception model (DatabaseException "future") |
+| NLS-902 | db_measure metrics decorator + CrudOperation enum | Open | §12 — observability (x-link NLS-701) |
+| NLS-903 | Cursor pagination helper + ext_str util | Open | §12 — shared common utils; PaginatedResponseSchema |
+| NLS-904 | IAM service scaffold (src/iam/) | Open | §12 — hexagonal service layout; §5 Phase 4 |
+| NLS-905 | RBAC domain entities | Open | §5 Phase 4 — access model; §12 domain layering |
+| NLS-906 | AccessModelRepository + AccessModelUnitOfWork ports | Open | §12 — ports & adapters (mirror patients) |
+| NLS-907 | RBAC domain commands + queries | Open | §12 — Commands/Queries; backend_conventions |
+| NLS-908 | IAM domain/tasks.py orchestration stub | Open | §12 — exception-orchestration rule |
+| NLS-909 | RBAC ORM models + extend UserORM | Open | §5 — auth users schema; §12 persistence |
+| NLS-910 | Alembic migration 0003_rbac | Open | §4 Housekeeper — centralized Alembic env |
+| NLS-911 | SQLAlchemyAccessModelRepository (postgres.py) | Open | §12 — persistence adapters (mirror PostgresUserRepository) |
+| NLS-912 | SQLAlchemy IAM Unit of Work | Open | §12 — unit of work (SqlAlchemyUnitOfWork) |
+| NLS-913 | Redis cache adapter + wiring | Open | §6 Redis (x-link NLS-104 / NLS-506) |
+| NLS-914 | Outbound gateways/ HTTP client scaffold | Open | §12 — outbound gateways (admin_ui httpx pattern) |
+| NLS-915 | email/ notification adapter scaffold | Open | §12 — notifier port (paymentgate parity) |
+| NLS-916 | IAM HTTP adapter (router, schemas, deps) | Open | §12 — HTTP adapters; ResponseSchema/PaginatedResponseSchema |
+| NLS-917 | Fake in-memory access model (repo + UoW) | Open | §12 — in-memory adapters (mirror patients in_mem.py) |
+| NLS-918 | Domain unit tests against fakes + conftest | Open | §12 — tests (asyncio_mode=auto) |
+| NLS-919 | Smoke test on FakeUnitOfWork (no Postgres) | Open | §12 — smoke tests use FakeUnitOfWork |
+| NLS-920 | SQLAlchemy adapter integration tests (marked, Postgres) | Open | §12 — adapter integration tests; CI gates |
+| NLS-921 | IAM Docker/compose/Makefile wiring | Open | §12 — per-service Dockerfile + compose + Make |
+| NLS-922 | ADR + docs update (id strategy, UserORM, RBAC schema) | Open | §5 / §6 — RBAC as Phase-4 layer atop JWT realm roles |
+
+**Dependency-ordered milestones (M-A → M-E):**
+
+- **M-A Foundations:** NLS-901 → NLS-902, NLS-903, NLS-904
+- **M-B Domain:** NLS-905 → NLS-906 → NLS-907, NLS-908; NLS-909
+- **M-C Persistence:** NLS-910 → NLS-911 → NLS-912; NLS-917
+- **M-D Edges:** NLS-913, NLS-914, NLS-915, NLS-916
+- **M-E Tests/ops/docs:** NLS-918, NLS-919, NLS-920, NLS-921, NLS-922
+
+---
+
 ## Gateway + browser OIDC (Pioneer extension)
 
 Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT directly** at the API edge (no AtomID exchange). Browser flow: **authorization code + PKCE** → gateway BFF holds refresh → forwards **Bearer** to backends.
@@ -131,7 +181,7 @@ Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT dire
 | NLS-ADMIN-05 | NLS-65 | EPIC-08 | React admin UI (auth pages + patients MVP) | Open |
 | NLS-ADMIN-06 | NLS-66 | EPIC-01 | Static SPA serving + `window._env_` | Open |
 | NLS-ADMIN-07 | NLS-67 | EPIC-01 | Docker compose: `admin_ui` on port 8000 | Open |
-| NLS-ADMIN-08 | NLS-68 | EPIC-02 | E2E smoke: browser login → patients + JIT row | Open |
+| NLS-ADMIN-08 | NLS-68 | EPIC-02 | E2E smoke: browser login → patients + JIT row | Partial |
 | NLS-ADMIN-09 | NLS-69 | EPIC-03 | Auth diagram: admin_ui BFF flow | Open |
 
 Create in Jira: `.\scripts\jira\create_admin_ui_tasks.ps1` (adds to Sprint Pioneer id 35).
@@ -156,13 +206,13 @@ Create in Jira: `.\scripts\jira\create_admin_ui_tasks.ps1` (adds to Sprint Pione
 
 ## Active sprint
 
-**Sprint 02 — admin_ui Pioneer** (6–13 Jul 2026, Jira sprint id **68**): see [`sprint-02-admin-ui-pioneer.md`](sprint-02-admin-ui-pioneer.md)
+**Sprint 03 — Clinical API foundation** (19 Jul → 2 Aug 2026, Jira sprint id **101**, board name `S03 Clinical API`): see [`sprint-03-clinical-api.md`](sprint-03-clinical-api.md)
 
-**Sprint goal:** Browser login via **admin_ui** BFF (:8000) with Keycloak JWT proxy to patients; gateway stories (NLS-50..59) for traceability.
+**Sprint goal:** Finish admin_ui E2E + auth docs; patients on Postgres.
 
-**Previous:** [Sprint 01 — Pioneer](sprint-01-pioneer.md) (id 35, closed).
+**Previous:** [Sprint 02 — admin_ui Pioneer](sprint-02-admin-ui-pioneer.md) (id 68, closed) · [Sprint 01 — Pioneer](sprint-01-pioneer.md) (id 35, closed).
 
-Full backlog keys: [`backlog-keys.md`](backlog-keys.md) (45 stories + 8 epics incl. NLS-GW-01..10).
+Full backlog keys: [`backlog-keys.md`](backlog-keys.md) (67 stories + 9 epics incl. NLS-GW-01..10 and NLS-901..922).
 
 ---
 

@@ -192,6 +192,8 @@ bash scripts/jira/jira_api.sh create \
 
 Invoke the `scrum_master` agent to propose a sprint goal, order dependencies, and create/move issues after you confirm the draft.
 
+**Active sprint:** [Sprint 03 — Clinical API foundation](sprint-03-clinical-api.md) (Jira id **101**). Sprint names are limited to **30 characters** on the board.
+
 ---
 
 ## Epic link note
