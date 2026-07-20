@@ -2,13 +2,15 @@
 
 #### Fixed
 
-1) Makefile / make.ps1 — dc fix; keycloak fix
+1) GitHub PR template — pull_request_template.md
 
-2) poetry.lock — dc fix
+2) Makefile / make.ps1 — dc fix; keycloak fix
 
-3) pyproject.toml — dc fix; keycloak fix
+3) poetry.lock — dc fix
 
-4) scripts/jira/jira_api.ps1 — demo fix
+4) pyproject.toml — dc fix; keycloak fix
+
+5) scripts/jira/jira_api.ps1 — demo fix
 
 #### Changed
 
