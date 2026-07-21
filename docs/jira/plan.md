@@ -199,6 +199,41 @@ Ready-made Jira creation script: [`scripts/jira/create_rbac_tasks.ps1`](../../sc
 
 ---
 
+## Epic: NLS-EPIC-10 — Radius torsion registration performance
+
+Performance initiative for [`scripts/radius_torsion_registration.py`](../../scripts/radius_torsion_registration.py):
+make the comparative radius-torsion measurement (`rot_register_3d` and its pipeline) faster
+**without changing clinical measurement results**. One separate ticket per optimization step,
+in priority order.
+
+**Actual Jira keys** (auto-assigned; distinct from the *suggested* `NLS-1xx` keys reused as
+plan-refs in EPIC-01): epic **NLS-100**, stories **NLS-101 … NLS-105**. Plan-refs use the
+`NLS-RTR-*` namespace to avoid confusion.
+
+**Kid-friendly problem:** two Lego bones — a sick arm bone and a healthy one flipped like in a
+mirror. Spin the healthy bone around its long axis until it looks most like the sick bone; that
+spin angle is the excess twist. `rot_register_3d` does the spinning-and-checking. It is slow
+because it uses a Python `set` + a per-spin loop; faster is a 3D bool occupancy "sticker board" +
+vectorized rotate/index. Pipeline: seeds → track bones → `find_homologous_level` (matching heights)
+→ `rot_register_3d` per level → excess twist = distal − proximal angle (`twist_profile`).
+
+**Cross-cutting acceptance criteria (all tickets):** PATIENTS presets stay the same
+(within ~0.1° / identical φ for same inputs) when DICOM + `radius_torsion_v3` available; otherwise
+synthetic A/B for `rot_register_3d`; minimal diffs (no unrelated pipeline refactor); document
+before/after timing where relevant.
+
+| Ref | Jira | Priority | Title | Status |
+|-----|------|----------|-------|--------|
+| NLS-RTR-01 | NLS-101 | 1 (highest) | Occupancy-array (vectorized) rewrite of `rot_register_3d` (attempted then rolled back — re-implement) | Open |
+| NLS-RTR-02 | NLS-102 | 2 | Cache `cross_section` / MPR slices in registration pipeline | Open |
+| NLS-RTR-03 | NLS-103 | 3 | Speed up `block_points_cont` with NumPy batch point collection | Open |
+| NLS-RTR-04 | NLS-104 | 4 | Two-stage `find_homologous_level` (coarse z search then refine) | Open |
+| NLS-RTR-05 | NLS-105 | 5 | `twist_profile`: skip unconstrained ±180° search when prior/PCA seed exists | Open |
+
+Suggested order = priority order (NLS-101 first). NLS-101 is the hot path and unblocks the biggest win.
+
+---
+
 ## Gateway + browser OIDC (Pioneer extension)
 
 Decomposes M2 for **Sprint 01 — Pioneer**. NeuroAtlas uses **Keycloak JWT directly** at the API edge (no AtomID exchange). Browser flow: **authorization code + PKCE** → gateway BFF holds refresh → forwards **Bearer** to backends.
