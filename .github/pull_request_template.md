@@ -10,4 +10,4 @@
 
 #### Added
 
-1) scripts/_ab_rot_register_check.py — script rot_register_3d fix
+1) scripts/_ab_torsion_perf_check.py — NLS-101/102 perf + equivalence harness

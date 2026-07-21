@@ -53,12 +53,58 @@ def _inplane_basis(tangent_world):
     return e_u, e_v
 
 
+# ─── Process-local кэш MPR для cross_section (NLS-102) ────────────────────────
+# Вызывающие (zone_signature, zone_ulna_anchor, section_profile,
+# block_points_cont, find_homologous_level) часто запрашивают ОДИН И ТОТ ЖЕ MPR
+# для (volume, axis, z, spacing, size_mm, res). Кэшируем результат, чтобы не
+# гонять ndimage.map_coordinates повторно. Ключ использует id(volume)/id(axis)
+# (объём НЕ хэшируется). Кэш process-local; чистится clear_cross_section_cache().
+_CROSS_SECTION_CACHE: dict = {}
+_CROSS_SECTION_STATS = {"hits": 0, "misses": 0}
+
+
+def clear_cross_section_cache():
+    """Очистить process-local кэш cross_section и сбросить счётчики hit/miss.
+
+    Полезно в тестах и долгоживущих сессиях, где id(volume)/id(axis) могут быть
+    переиспользованы после сборки мусора либо где нужно освободить память.
+    """
+    _CROSS_SECTION_CACHE.clear()
+    _CROSS_SECTION_STATS["hits"] = 0
+    _CROSS_SECTION_STATS["misses"] = 0
+
+
+def cross_section_cache_stats():
+    """Вернуть {'hits', 'misses', 'size'} для верификации работы кэша."""
+    return {"hits": _CROSS_SECTION_STATS["hits"],
+            "misses": _CROSS_SECTION_STATS["misses"],
+            "size": len(_CROSS_SECTION_CACHE)}
+
+
 def cross_section(volume, axis, z_slice, spacing, size_mm=26.0, res=0.4):
     """
     MPR ⊥ локальной касательной оси в точке z_slice; центр = точка оси.
     Возвращает (img, res). spacing = (sz, sxy, sxy) в мм.
+
+    Идентичные запросы (тот же volume/axis/z/spacing/size_mm/res) обслуживаются
+    из process-local кэша: повторный вызов возвращает ранее посчитанный MPR без
+    повторного ndimage.map_coordinates. Ключ строится из id(volume)/id(axis)
+    (объём НЕ хэшируется), округлённого z, spacing, size_mm, res. Кэш чистится
+    через clear_cross_section_cache(); счётчики — cross_section_cache_stats().
+
+    ВНИМАНИЕ: при попадании возвращается кэшированный массив (без копии) —
+    вызывающий код НЕ должен мутировать MPR на месте. Все текущие вызывающие
+    только читают срез (пороги/маски создают новые массивы), поэтому копия не
+    делается ради скорости.
     """
     spacing = np.asarray(spacing, float)
+    key = (id(volume), id(axis), round(float(z_slice), 6),
+           float(size_mm), float(res), tuple(spacing.tolist()))
+    cached = _CROSS_SECTION_CACHE.get(key)
+    if cached is not None:
+        _CROSS_SECTION_STATS["hits"] += 1
+        return cached, res
+    _CROSS_SECTION_STATS["misses"] += 1
     t = np.array([1.0, axis.der_y(z_slice), axis.der_x(z_slice)]) * spacing
     e_u, e_v = _inplane_basis(t)
     c = np.array([z_slice, axis.val_y(z_slice), axis.val_x(z_slice)]) * spacing
@@ -70,7 +116,9 @@ def cross_section(volume, axis, z_slice, spacing, size_mm=26.0, res=0.4):
     samp = ndimage.map_coordinates(
         volume, [idx[..., 0].ravel(), idx[..., 1].ravel(), idx[..., 2].ravel()],
         order=1, mode="constant", cval=-1000)
-    return samp.reshape(n, n), res
+    img = samp.reshape(n, n)
+    _CROSS_SECTION_CACHE[key] = img
+    return img, res
 
 
 def _radius_region(mpr, hu_min=HU_CORTICAL_MIN):
@@ -364,7 +412,7 @@ def rot_register_3d(ptsA, ptsH, gv=1.0, coarse=3.0, prior=None, window=50.0):
     массиве занятости (bbox округлённых воксельных ключей), а перекрытие на
     каждом угле считается векторной индексацией NumPy. Числовой путь ключей
     (`np.round(x / gv).astype(int)`) и обработка OOB (промах) совпадают с
-    прежней set-реализацией (A/B: scripts/_ab_rot_register_check.py).
+    прежней set-реализацией (A/B/timing: scripts/_ab_torsion_perf_check.py).
     """
     if len(ptsA) < 50 or len(ptsH) < 50:
         return 0.0, 0.0
