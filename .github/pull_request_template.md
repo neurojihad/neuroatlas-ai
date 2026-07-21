@@ -1,15 +1,15 @@
-<!-- Generated from `origin/master..HEAD` on branch `NLS-102-fix-Occupancy-array-(vectorized)-rewrite-of-rot_register_3d`. Auto-updated by pre-push hook. -->
+<!-- Generated from `origin/master..HEAD` on branch `NLS-103-Speed-up-block_points_cont`. Auto-updated by pre-push hook. -->
 
 #### Fixed
 
-1) GitHub PR template — cache fix
+1) scripts/_ab_torsion_perf_check.py — block_points_cont fix
 
-2) scripts/radius_torsion_registration.py — cache fix
+2) scripts/radius_torsion_registration.py — block_points_cont fix
 
 #### Changed
 
-1) scripts/_ab_rot_register_check.py — cache fix
+1) —
 
 #### Added
 
-1) scripts/_ab_torsion_perf_check.py — cache fix
+1) —
