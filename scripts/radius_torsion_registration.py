@@ -346,6 +346,11 @@ def block_points_cont(volume, axis, zc, spacing, half_block=22, hu=400,
     СВЯЗНАЯ протяжка: на zc берётся компонента, ближайшая к центру; на соседних
     срезах — компонента с максимальным перекрытием маски предыдущего среза.
     Это удерживает трекинг на лучевой и не даёт прихватить кости запястья/локтя.
+
+    Реализация: точки среза строятся батчево NumPy (np.column_stack на срез +
+    один np.vstack в конце) вместо прежнего Python-цикла append. Порядок точек
+    (np.where, row-major) и значения (s,u,v) идентичны прежней реализации
+    (A/B/timing: scripts/_ab_torsion_perf_check.py).
     """
     n = int(2 * size_mm / res); c = n / 2.0
     zc = int(zc)
@@ -367,10 +372,16 @@ def block_points_cont(volume, axis, zc, spacing, half_block=22, hu=400,
     rad = min(regs, key=lambda r: np.hypot(r.centroid[0] - c, r.centroid[1] - c))
 
     def collect(z, mask):
+        # Батчевое построение точек среза NumPy вместо Python-цикла: (s,u,v)
+        # для каждого костного пикселя маски. Порядок np.where (row-major)
+        # совпадает с прежней реализацией → значения (s,u,v) идентичны.
         ys, xs = np.where(mask)
         s = (z - zc) * spacing[0]
-        for uu, vv in zip((xs - c) * res, (ys - c) * res):
-            pts.append((s, uu, vv))
+        pts.append(np.column_stack([
+            np.full(xs.shape[0], s, dtype=float),
+            (xs - c) * res,
+            (ys - c) * res,
+        ]))
 
     prev = (lab == rad.label)
     collect(zc, prev)
@@ -393,7 +404,9 @@ def block_points_cont(volume, axis, zc, spacing, half_block=22, hu=400,
                 break
             pm = (lab == best.label)
             collect(z, pm)
-    return np.asarray(pts)
+    if not pts:
+        return np.empty((0, 3))
+    return np.vstack(pts)
 
 
 def rot_register_3d(ptsA, ptsH, gv=1.0, coarse=3.0, prior=None, window=50.0):
