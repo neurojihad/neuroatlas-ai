@@ -1,13 +1,13 @@
-<!-- Generated from `origin/NLS-78-add-DatabaseException-adapter-layer-exception..HEAD` on branch `NLS-78-add-DatabaseException-adapter-layer-exception`. Auto-updated by pre-push hook. -->
+<!-- Generated from `origin/master..HEAD` on branch `NLS-101-fix-rot_register_3d`. Auto-updated by pre-push hook. -->
 
 #### Fixed
 
-1) —
+1) scripts/radius_torsion_registration.py — script rot_register_3d fix
 
 #### Changed
 
-1) Jira tracking — script added fix; error handlers fix
+1) —
 
 #### Added
 
-1) scripts/radius_torsion_registration.py — script added fix
+1) scripts/_ab_rot_register_check.py — script rot_register_3d fix
