@@ -207,7 +207,7 @@ make the comparative radius-torsion measurement (`rot_register_3d` and its pipel
 in priority order.
 
 **Actual Jira keys** (auto-assigned; distinct from the *suggested* `NLS-1xx` keys reused as
-plan-refs in EPIC-01): epic **NLS-100**, stories **NLS-101 … NLS-105**. Plan-refs use the
+plan-refs in EPIC-01): epic **NLS-100**, stories **NLS-101 … NLS-106**. Plan-refs use the
 `NLS-RTR-*` namespace to avoid confusion.
 
 **Kid-friendly problem:** two Lego bones — a sick arm bone and a healthy one flipped like in a
@@ -229,8 +229,10 @@ before/after timing where relevant.
 | NLS-RTR-03 | NLS-103 | 3 | Speed up `block_points_cont` with NumPy batch point collection | Open |
 | NLS-RTR-04 | NLS-104 | 4 | Two-stage `find_homologous_level` (coarse z search then refine) | Open |
 | NLS-RTR-05 | NLS-105 | 5 | `twist_profile`: skip unconstrained ±180° search when prior/PCA seed exists | Open |
+| NLS-RTR-06 | NLS-106 | 6 | Emulated patient-pipeline E2E timing (legacy stack vs NLS-101…104 opts) | Open |
 
 Suggested order = priority order (NLS-101 first). NLS-101 is the hot path and unblocks the biggest win.
+NLS-106 is measurement tooling (synthetic E2E speedup \(T_{\text{legacy}}/T_{\text{new}}\)); do **not** multiply micro-bench × factors for pipeline speedup.
 
 ---
 

@@ -437,7 +437,7 @@ def run_nls103(mod) -> bool:
 
     if len(new_pts) == 0:
         print("FAIL: no points collected — synthetic bone was not segmented\n")
-        return False
+        return False, None
 
     equal = (new_pts.shape == legacy_pts.shape) and np.array_equal(new_pts, legacy_pts)
 

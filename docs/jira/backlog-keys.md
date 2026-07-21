@@ -124,3 +124,16 @@ Stories `NLS-901` (NLS-73) and `NLS-902` (NLS-74) are created; `NLS-903..NLS-922
 | NLS-920 | pending | NLS-72 | SQLAlchemy adapter integration tests (marked, Postgres) |
 | NLS-921 | pending | NLS-72 | IAM Docker/compose/Makefile wiring |
 | NLS-922 | pending | NLS-72 | ADR + docs update (id strategy, UserORM, RBAC schema) |
+
+## Epic NLS-EPIC-10 — Radius torsion registration performance
+
+Actual Jira epic: **NLS-100**. Plan-refs use `NLS-RTR-*` (do not confuse with EPIC-01 suggested keys NLS-101…106 → NLS-19…24).
+
+| plan ref | Jira | Epic | Title |
+|----------|------|------|-------|
+| NLS-RTR-01 | NLS-101 | NLS-100 | Occupancy-array rewrite of rot_register_3d |
+| NLS-RTR-02 | NLS-102 | NLS-100 | Cache cross_section / MPR slices |
+| NLS-RTR-03 | NLS-103 | NLS-100 | Speed up block_points_cont (NumPy batch) |
+| NLS-RTR-04 | NLS-104 | NLS-100 | Two-stage find_homologous_level |
+| NLS-RTR-05 | NLS-105 | NLS-100 | twist_profile: skip unconstrained ±180° when prior/PCA |
+| NLS-RTR-06 | NLS-106 | NLS-100 | Emulated patient-pipeline E2E timing (legacy vs opts) |
