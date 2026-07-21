@@ -8,13 +8,16 @@ Sections:
             for-loop append (`_block_points_cont_legacy`).
   NLS-104 — `find_homologous_level`: two-stage coarse→fine vs dense one-stage
             (`_find_homologous_level_legacy`).
-  GENERAL — combined speedup table (sum of section workloads).
+  NLS-105 — `twist_profile`: unconstrained ±180° on all levels (legacy) vs
+            seed-only unconstrained + prior walk (production).
+  NLS-106 — Emulated patient-pipeline E2E: full legacy stack vs all opts
+            (S = T_legacy / T_new). NOT the product of per-ticket × factors.
+  GENERAL — micro-bench TOTAL (sum of section ms) + E2E pipeline-like speedup.
 
 Reference set-based `rot_register_3d`, legacy Python-loop `block_points_cont`,
-and legacy dense homologous search live here only (not in production). Only
-`radius_torsion_v3` is stubbed; **scipy and skimage are used real when present**
-(NLS-102 needs ndimage.map_coordinates; NLS-103/104 need skimage). If skimage
-is missing, NLS-102/103/104 SKIP gracefully.
+legacy dense homologous search, and legacy twist_profile live here only.
+Only `radius_torsion_v3` is stubbed; **scipy and skimage are used real when present**.
+If skimage is missing, NLS-102/103/104/105/106 SKIP gracefully.
 
 Run:  python scripts/_ab_torsion_perf_check.py
 """
@@ -602,33 +605,366 @@ def run_nls104(mod) -> bool:
     }
 
 
-def _print_general_speedup(rows):
-    """Print combined speedup table for all tickets that reported timings."""
+# ── NLS-105 helpers ──────────────────────────────────────────────────────────
+
+def _twist_profile_legacy(mod, volA, axA, volM, axH, prox_aff, prox_hlt, dist_aff,
+                          spacing, step=30, half_block=16, ov_gate=0.6):
+    """Pre-NLS-105 twist_profile: unconstrained ±180° on EVERY level, then prior walk."""
+    HU_CORTICAL_MIN = mod.HU_CORTICAL_MIN
+    mid = (prox_aff + dist_aff) / 2
+    levels = list(range(int(prox_aff) + 20, int(dist_aff) + 1, step))
+    pts = {}
+    glob = {}
+    for zA in levels:
+        zH = prox_hlt + (zA - prox_aff)
+        hu = HU_CORTICAL_MIN if zA < mid else 500
+        pA = mod.block_points_cont(volA, axA, zA, spacing, half_block, hu)
+        pH = mod.block_points_cont(volM, axH, zH, spacing, half_block, hu)
+        pts[zA] = (pA, pH)
+        phi0, ov0 = mod.rot_register_3d(pA, pH)
+        ratio = (len(pH) + 1) / (len(pA) + 1)
+        if ratio < 0.55 or ratio > 1.8:
+            ov0 = min(ov0, ov_gate - 0.01)
+        glob[zA] = (phi0, ov0)
+    if not levels:
+        return np.empty((0, 3)), np.empty((0, 3)), None, None
+    anchor = max(levels, key=lambda z: glob[z][1])
+    phi_a = {anchor: glob[anchor][0]}
+    ov_a = {anchor: glob[anchor][1]}
+    ai = levels.index(anchor)
+    prior = glob[anchor][0]
+    for z in levels[ai + 1:]:
+        phi, ov = mod.rot_register_3d(*pts[z], prior=prior)
+        phi_a[z], ov_a[z] = phi, ov
+        if ov >= ov_gate:
+            prior = phi
+    prior = glob[anchor][0]
+    for z in reversed(levels[:ai]):
+        phi, ov = mod.rot_register_3d(*pts[z], prior=prior)
+        phi_a[z], ov_a[z] = phi, ov
+        if ov >= ov_gate:
+            prior = phi
+    rows = np.array([[z, phi_a[z], ov_a[z]] for z in levels], float)
+    good = rows[rows[:, 2] >= ov_gate]
+    excess_span = slope_per100 = None
+    if len(good) >= 3:
+        ph = np.degrees(np.unwrap(np.radians(good[:, 1])))
+        zz = good[:, 0]
+        sl = np.median([(ph[j] - ph[i]) / (zz[j] - zz[i])
+                        for i in range(len(zz)) for j in range(i + 1, len(zz))])
+        slope_per100 = float(sl * 100.0)
+        excess_span = float(sl * (zz[-1] - zz[0]))
+    return rows, good, excess_span, slope_per100
+
+
+def _make_twisted_pair(nz=120, ny=96, nx=96, twist_per_100=40.0):
+    """
+    Two volumes with the same elliptical cortical ring; healthy side is twisted
+    around z relative to affected so twist_profile sees a smooth φ slope.
+    """
+    volA = np.full((nz, ny, nx), -100, dtype=np.int16)
+    volH = np.full((nz, ny, nx), -100, dtype=np.int16)
+    cy, cx = ny / 2.0, nx / 2.0
+    yy, xx = np.mgrid[0:ny, 0:nx]
+    a, b = 16.0, 10.0
+    for z in range(nz):
+        phi = np.radians(twist_per_100 * (z - nz / 2) / 100.0)
+        ct, st = np.cos(phi), np.sin(phi)
+        # affected: fixed ellipse
+        ry = (yy - cy) / a
+        rx = (xx - cx) / b
+        r = np.sqrt(ry * ry + rx * rx)
+        mask = (r >= 0.72) & (r <= 1.08)
+        volA[z][mask] = 900
+        volA[z][r < 0.72] = 450
+        # healthy: rotated ellipse in-plane
+        y0, x0 = yy - cy, xx - cx
+        yr = y0 * ct + x0 * st
+        xr = -y0 * st + x0 * ct
+        ry = yr / a
+        rx = xr / b
+        r = np.sqrt(ry * ry + rx * rx)
+        mask = (r >= 0.72) & (r <= 1.08)
+        volH[z][mask] = 900
+        volH[z][r < 0.72] = 450
+    return volA, volH
+
+
+def run_nls105(mod) -> tuple:
     print("=" * 95)
-    print("GENERAL SPEEDUP  —  NLS-EPIC-10 performance tickets (synthetic A/B)")
+    print("NLS-105  twist_profile  —  unconstrained on all levels (legacy) vs seed-only + prior")
+    print("=" * 95)
+
+    if not _skimage_available():
+        print("SKIP: scikit-image not installed\n")
+        return True, None
+    try:
+        import scipy.ndimage  # noqa: F401
+    except ImportError:
+        print("SKIP: scipy not installed\n")
+        return True, None
+
+    nz = 120
+    spacing = (0.5, 0.5, 0.5)
+    volA, volH = _make_twisted_pair(nz=nz, twist_per_100=40.0)
+    axis = _FakeAxis(y0=volA.shape[1] / 2.0, dy=0.0,
+                     x0=volA.shape[2] / 2.0, dx=0.0,
+                     der_y=0.0, der_x=0.0,
+                     z_min=0, z_max=nz - 1)
+    prox, dist = 20, 100
+    step = 20  # fewer levels for faster A/B (~5 levels)
+    kwargs = dict(step=step, half_block=8, ov_gate=0.5)
+
+    n_levels = len(range(int(prox) + 20, int(dist) + 1, step))
+    # legacy: N unconstrained + N prior; new: ≤3 unconstrained + N prior
+    print(f"levels~{n_levels}: legacy unconstrained x{n_levels}+prior walk; "
+          f"new unconstrained x<=3+prior walk")
+
+    mod.clear_cross_section_cache()
+    t0 = time.perf_counter()
+    rows_l, good_l, excess_l, slope_l = _twist_profile_legacy(
+        mod, volA, axis, volH, axis, prox, prox, dist, spacing, **kwargs)
+    t_legacy = time.perf_counter() - t0
+
+    mod.clear_cross_section_cache()
+    t0 = time.perf_counter()
+    rows_n, good_n, excess_n, slope_n = mod.twist_profile(
+        volA, axis, volH, axis, prox, prox, dist, spacing, **kwargs)
+    t_new = time.perf_counter() - t0
+
+    if len(rows_l) == 0 or len(rows_n) == 0:
+        print("FAIL: empty twist_profile rows\n")
+        return False, None
+
+    # Compare φ on common z. Seed-anchor vs global-max-ov anchor can differ by
+    # ~one coarse grid step (default coarse=3°) after prior propagation.
+    z_l = {int(r[0]): r[1] for r in rows_l}
+    z_n = {int(r[0]): r[1] for r in rows_n}
+    common = sorted(set(z_l) & set(z_n))
+    dphi = [abs(((z_l[z] - z_n[z] + 180) % 360) - 180) for z in common]
+    max_dphi = max(dphi) if dphi else 999.0
+    mean_dphi = float(np.mean(dphi)) if dphi else 999.0
+    tol = 6.0  # ≤2× default coarse step; algorithm seed ≠ full-scan anchor
+    ok = max_dphi <= tol and len(common) == len(rows_l) == len(rows_n)
+    speed = t_legacy / t_new if t_new else float("inf")
+
+    print(f"rows legacy={len(rows_l)} new={len(rows_n)}; "
+          f"good legacy={len(good_l)} new={len(good_n)}")
+    print(f"φ match: max|Δφ|={max_dphi:.2f}° mean|Δφ|={mean_dphi:.2f}° "
+          f"(tol {tol:.0f}°) → {'OK' if ok else 'FAIL'}")
+    if excess_l is not None and excess_n is not None:
+        print(f"excess/slope legacy={excess_l:+.1f}°/{slope_l:+.1f}  "
+              f"new={excess_n:+.1f}°/{slope_n:+.1f}")
+    print(f"\nlegacy (all-level ±180°): {t_legacy * 1e3:8.1f} ms")
+    print(f"new (seed ±180° + prior): {t_new * 1e3:8.1f} ms")
+    print(f"speedup:                   {speed:6.1f}x\n")
+    return ok, {
+        "id": "NLS-105",
+        "name": "twist_profile (all-level ±180° → seed+prior)",
+        "t_ref_ms": t_legacy * 1e3,
+        "t_new_ms": t_new * 1e3,
+        "speedup": speed,
+    }
+
+
+# ── NLS-106 helpers (emulated patient-shaped E2E) ────────────────────────────
+
+def _e2e_opts_on(mod, volA, volH, axis, spacing, prox, dist, half_zone=3):
+    """Production hot path: homologous (two-stage) + twist_profile (seed+prior)."""
+    mod.clear_cross_section_cache()
+    sig = mod.zone_signature(volA, axis, prox, spacing, half_zone,
+                             hu_min=mod.HU_CORTICAL_MIN)
+    if sig is None:
+        return None
+    z_guess = prox + 16
+    z_hlt, _q = mod.find_homologous_level(
+        volH, axis, sig, z_guess, spacing,
+        search_half=40, step=2, half_zone=half_zone,
+        hu_min=mod.HU_CORTICAL_MIN)
+    if z_hlt is None:
+        z_hlt = prox
+    return mod.twist_profile(
+        volA, axis, volH, axis, prox, z_hlt, dist, spacing,
+        step=20, half_block=8, ov_gate=0.5)
+
+
+def _e2e_legacy_stack(mod, volA, volH, axis, spacing, prox, dist, half_zone=3):
+    """
+    Pre-opt hot path: cold MPR (no cache reuse), set-based rot_register,
+    Python-loop block_points, dense homologous, all-level ±180° twist_profile.
+    """
+    mod.clear_cross_section_cache()
+    orig_cs = mod.cross_section
+    orig_reg = mod.rot_register_3d
+    orig_bp = mod.block_points_cont
+
+    def cold_cs(*a, **k):
+        mod._CROSS_SECTION_CACHE.clear()
+        return orig_cs(*a, **k)
+
+    def bp_leg(volume, axis_, zc, spacing_, half_block=22, hu=400, res=0.5,
+               size_mm=24):
+        return _block_points_cont_legacy(
+            mod, volume, axis_, zc, spacing_, half_block, hu, res, size_mm)
+
+    mod.cross_section = cold_cs
+    mod.rot_register_3d = _rot_register_3d_set
+    mod.block_points_cont = bp_leg
+    try:
+        sig = mod.zone_signature(volA, axis, prox, spacing, half_zone,
+                                 hu_min=mod.HU_CORTICAL_MIN)
+        if sig is None:
+            return None
+        z_guess = prox + 16
+        z_hlt, _q = _find_homologous_level_legacy(
+            mod, volH, axis, sig, z_guess, spacing,
+            search_half=40, step=2, half_zone=half_zone,
+            hu_min=mod.HU_CORTICAL_MIN)
+        if z_hlt is None:
+            z_hlt = prox
+        return _twist_profile_legacy(
+            mod, volA, axis, volH, axis, prox, z_hlt, dist, spacing,
+            step=20, half_block=8, ov_gate=0.5)
+    finally:
+        mod.cross_section = orig_cs
+        mod.rot_register_3d = orig_reg
+        mod.block_points_cont = orig_bp
+        mod.clear_cross_section_cache()
+
+
+def run_nls106(mod, micro_metrics=None) -> tuple:
+    print("=" * 95)
+    print("NLS-106  E2E emulated patient hot path  —  full legacy stack vs all opts")
+    print("=" * 95)
+
+    if not _skimage_available():
+        print("SKIP: scikit-image not installed\n")
+        return True, None
+    try:
+        import scipy.ndimage  # noqa: F401
+    except ImportError:
+        print("SKIP: scipy not installed\n")
+        return True, None
+
+    nz = 120
+    spacing = (0.5, 0.5, 0.5)
+    volA, volH = _make_twisted_pair(nz=nz, twist_per_100=40.0)
+    axis = _FakeAxis(y0=volA.shape[1] / 2.0, dy=0.0,
+                     x0=volA.shape[2] / 2.0, dx=0.0,
+                     der_y=0.0, der_x=0.0,
+                     z_min=0, z_max=nz - 1)
+    prox, dist = 20, 100
+    half_zone = 3
+
+    print("Hot path: zone_signature -> find_homologous_level -> twist_profile")
+    print("Legacy: cold MPR + set register + Python collect + dense homologous "
+          "+ all-level +/-180")
+    print("Opts:   MPR cache + array register + NumPy collect + two-stage "
+          "+ seed+prior")
+
+    t0 = time.perf_counter()
+    out_l = _e2e_legacy_stack(mod, volA, volH, axis, spacing, prox, dist, half_zone)
+    t_legacy = time.perf_counter() - t0
+
+    t0 = time.perf_counter()
+    out_n = _e2e_opts_on(mod, volA, volH, axis, spacing, prox, dist, half_zone)
+    t_new = time.perf_counter() - t0
+
+    if out_l is None or out_n is None:
+        print("FAIL: E2E pipeline returned None (segmentation empty)\n")
+        return False, None
+
+    rows_l, good_l, excess_l, slope_l = out_l
+    rows_n, good_n, excess_n, slope_n = out_n
+    if len(rows_l) == 0 or len(rows_n) == 0:
+        print("FAIL: empty E2E twist rows\n")
+        return False, None
+
+    z_l = {int(r[0]): r[1] for r in rows_l}
+    z_n = {int(r[0]): r[1] for r in rows_n}
+    common = sorted(set(z_l) & set(z_n))
+    dphi = [abs(((z_l[z] - z_n[z] + 180) % 360) - 180) for z in common]
+    max_dphi = max(dphi) if dphi else 999.0
+    mean_dphi = float(np.mean(dphi)) if dphi else 999.0
+    tol = 6.0
+    ok = max_dphi <= tol and len(common) > 0
+    speed = t_legacy / t_new if t_new else float("inf")
+
+    # Misleading product of isolated micro-bench × (for contrast only)
+    product = None
+    if micro_metrics:
+        product = 1.0
+        for m in micro_metrics:
+            if m is not None and m.get("speedup"):
+                product *= m["speedup"]
+
+    print(f"\nrows legacy={len(rows_l)} new={len(rows_n)}; "
+          f"good legacy={len(good_l)} new={len(good_n)}")
+    print(f"phi match: max|dphi|={max_dphi:.2f} deg mean={mean_dphi:.2f} "
+          f"(tol {tol:.0f}) -> {'OK' if ok else 'FAIL'}")
+    if excess_l is not None and excess_n is not None:
+        print(f"excess/slope legacy={excess_l:+.1f}/{slope_l:+.1f}  "
+              f"new={excess_n:+.1f}/{slope_n:+.1f}")
+    print(f"\nT_legacy (full stack off): {t_legacy * 1e3:8.1f} ms")
+    print(f"T_new    (NLS-101..105 on): {t_new * 1e3:8.1f} ms")
+    print(f"E2E speedup S = T_legacy/T_new: {speed:6.1f}x")
+    if product is not None:
+        print(f"Product of micro-bench x factors:  {product:6.1f}x  "
+              f"(MISLEADING — not pipeline speedup)")
+    print("Note: synthetic E2E; real DICOM patient timing still needs "
+          "radius_torsion_v3 + series folder.\n")
+    return ok, {
+        "id": "NLS-106",
+        "name": "E2E hot path (legacy stack → all opts)",
+        "t_ref_ms": t_legacy * 1e3,
+        "t_new_ms": t_new * 1e3,
+        "speedup": speed,
+        "e2e": True,
+        "product_misleading": product,
+    }
+
+
+def _print_general_speedup(rows, e2e=None):
+    """Print micro-bench TOTAL and optional E2E pipeline-like speedup."""
+    print("=" * 95)
+    print("GENERAL SPEEDUP  —  NLS-EPIC-10 (synthetic A/B)")
     print("=" * 95)
     print(f"{'ticket':<10} {'component':<52} {'ref ms':>9} {'new ms':>9} {'speedup':>9}")
     print("-" * 95)
     t_ref_sum = t_new_sum = 0.0
     n = 0
+    micro = []
     for r in rows:
         if r is None:
+            continue
+        if r.get("e2e"):
             continue
         print(f"{r['id']:<10} {r['name']:<52} "
               f"{r['t_ref_ms']:9.1f} {r['t_new_ms']:9.1f} {r['speedup']:8.1f}x")
         t_ref_sum += r["t_ref_ms"]
         t_new_sum += r["t_new_ms"]
         n += 1
+        micro.append(r)
     print("-" * 95)
     if n == 0:
-        print("(no timed sections — all skipped)")
-        return
-    overall = t_ref_sum / t_new_sum if t_new_sum else float("inf")
-    print(f"{'TOTAL':<10} {'sum of section workloads (not full patient run)':<52} "
-          f"{t_ref_sum:9.1f} {t_new_sum:9.1f} {overall:8.1f}x")
+        print("(no timed micro-bench sections — all skipped)")
+    else:
+        overall = t_ref_sum / t_new_sum if t_new_sum else float("inf")
+        print(f"{'MICRO':<10} {'sum of isolated section workloads':<52} "
+              f"{t_ref_sum:9.1f} {t_new_sum:9.1f} {overall:8.1f}x")
+    if e2e is not None:
+        print("-" * 95)
+        print(f"{e2e['id']:<10} {e2e['name']:<52} "
+              f"{e2e['t_ref_ms']:9.1f} {e2e['t_new_ms']:9.1f} {e2e['speedup']:8.1f}x")
+        print(f"{'E2E':<10} {'pipeline-like total (use THIS, not product of x)':<52} "
+              f"{'':>9} {'':>9} {e2e['speedup']:8.1f}x")
+        if e2e.get("product_misleading"):
+            print(f"{'(ref)':<10} {'product of micro-bench x (do NOT use)':<52} "
+                  f"{'':>9} {'':>9} {e2e['product_misleading']:8.1f}x")
     print()
-    print("Note: TOTAL is sum of isolated micro-benchmarks (NLS-101..104), not wall-clock")
-    print("      of a full DICOM patient pipeline. Use main script + stopwatch for that.")
+    print("Note: MICRO TOTAL = sum of NLS-101..105 benches, not a full DICOM run.")
+    print("      E2E = one synthetic hot-path wall-clock (homologous + twist_profile).")
+    print("      Real patient speedup: time main script on DICOM before vs after.")
     print()
 
 
@@ -643,16 +979,20 @@ def main():
     ok102, m102 = run_nls102(mod)
     ok103, m103 = run_nls103(mod)
     ok104, m104 = run_nls104(mod)
+    ok105, m105 = run_nls105(mod)
+    ok106, m106 = run_nls106(mod, micro_metrics=[m101, m102, m103, m104, m105])
 
-    _print_general_speedup([m101, m102, m103, m104])
+    _print_general_speedup([m101, m102, m103, m104, m105], e2e=m106)
 
     print("=" * 95)
-    overall = ok101 and ok102 and ok103 and ok104
+    overall = ok101 and ok102 and ok103 and ok104 and ok105 and ok106
     print(f"OVERALL: {'PASS' if overall else 'FAIL'}  "
           f"(NLS-101 {'OK' if ok101 else 'FAIL'}, "
           f"NLS-102 {'OK' if ok102 else 'FAIL'}, "
           f"NLS-103 {'OK' if ok103 else 'FAIL'}, "
-          f"NLS-104 {'OK' if ok104 else 'FAIL'})")
+          f"NLS-104 {'OK' if ok104 else 'FAIL'}, "
+          f"NLS-105 {'OK' if ok105 else 'FAIL'}, "
+          f"NLS-106 {'OK' if ok106 else 'FAIL'})")
     print("=" * 95)
     return 0 if overall else 1
 

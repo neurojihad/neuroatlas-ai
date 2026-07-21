@@ -520,49 +520,70 @@ def twist_profile(volA, axA, volM, axH, prox_aff, prox_hlt, dist_aff,
     отдельного среза и воспроизводимо между сканами).
 
     Возвращает (rows[zA,phi,ov], good_rows, excess_span_deg, slope_per100_deg).
+
+    NLS-105: полный ±180° поиск rot_register_3d выполняется только на 1–3
+    seed-уровнях (середина, при ≥3 уровнях также концы) для выбора якоря;
+    остальные уровни — только с prior (окно), без «двойной домашки» на каждом z.
     """
     mid = (prox_aff + dist_aff) / 2
     levels = list(range(int(prox_aff) + 20, int(dist_aff) + 1, step))
-    # 1) собрать блоки и глобальную регистрацию на каждом уровне
+    if not levels:
+        return np.empty((0, 3)), np.empty((0, 3)), None, None
+
+    # 1) собрать блоки (без регистрации)
     pts = {}
-    glob = {}
     for zA in levels:
         zH = prox_hlt + (zA - prox_aff)
         hu = HU_CORTICAL_MIN if zA < mid else 500
         pA = block_points_cont(volA, axA, zA, spacing, half_block, hu)
         pH = block_points_cont(volM, axH, zH, spacing, half_block, hu)
         pts[zA] = (pA, pH)
-        phi0, ov0 = rot_register_3d(pA, pH)
-        # фильтр рассогласования объёмов блоков: сильно разные размеры = уровни
-        # не гомологичны (сегментация захватила разное) → уровень ненадёжен
+
+    def _ov_gate_ratio(pA, pH, ov):
         ratio = (len(pH) + 1) / (len(pA) + 1)
         if ratio < 0.55 or ratio > 1.8:
-            ov0 = min(ov0, ov_gate - 0.01)
-        glob[zA] = (phi0, ov0)
-    # 2) якорь = уровень с макс. overlap (надёжная привязка, без холодного старта)
-    anchor = max(levels, key=lambda z: glob[z][1])
-    phi_a = {anchor: glob[anchor][0]}
-    ov_a = {anchor: glob[anchor][1]}
-    # 3) идти наружу от якоря с континуитетом
+            return min(ov, ov_gate - 0.01)
+        return ov
+
+    # 2) якорь: unconstrained только на seed-кандидатах (середина ± концы)
+    cand_i = {len(levels) // 2}
+    if len(levels) >= 3:
+        cand_i.add(0)
+        cand_i.add(len(levels) - 1)
+    seeds = {}
+    for i in cand_i:
+        zA = levels[i]
+        pA, pH = pts[zA]
+        phi0, ov0 = rot_register_3d(pA, pH)  # prior=None → полный ±180°
+        seeds[zA] = (phi0, _ov_gate_ratio(pA, pH, ov0))
+    anchor = max(seeds, key=lambda z: seeds[z][1])
+    phi_a = {anchor: seeds[anchor][0]}
+    ov_a = {anchor: seeds[anchor][1]}
+
+    # 3) идти наружу от якоря с континуитетом (только prior-окно)
     ai = levels.index(anchor)
-    prior = glob[anchor][0]
+    prior = seeds[anchor][0]
     for z in levels[ai + 1:]:
-        phi, ov = rot_register_3d(*pts[z], prior=prior)
+        pA, pH = pts[z]
+        phi, ov = rot_register_3d(pA, pH, prior=prior)
+        ov = _ov_gate_ratio(pA, pH, ov)
         phi_a[z], ov_a[z] = phi, ov
         if ov >= ov_gate:
             prior = phi
-    prior = glob[anchor][0]
+    prior = seeds[anchor][0]
     for z in reversed(levels[:ai]):
-        phi, ov = rot_register_3d(*pts[z], prior=prior)
+        pA, pH = pts[z]
+        phi, ov = rot_register_3d(pA, pH, prior=prior)
+        ov = _ov_gate_ratio(pA, pH, ov)
         phi_a[z], ov_a[z] = phi, ov
         if ov >= ov_gate:
             prior = phi
+
     rows = np.array([[z, phi_a[z], ov_a[z]] for z in levels], float)
     good = rows[rows[:, 2] >= ov_gate]
     excess_span = slope_per100 = None
     if len(good) >= 3:
         ph = np.degrees(np.unwrap(np.radians(good[:, 1])))
-        # робастный наклон (Тейл–Сен) — устойчив к остаточным выбросам
         zz = good[:, 0]
         sl = np.median([(ph[j] - ph[i]) / (zz[j] - zz[i])
                         for i in range(len(zz)) for j in range(i + 1, len(zz))])
