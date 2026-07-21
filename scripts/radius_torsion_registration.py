@@ -285,7 +285,7 @@ def circular_align_angle(sig_ref, sig_mov, nbins=360):
 
 def find_homologous_level(volM, axH, sig_ref, z_guess, spacing,
                           search_half=130, step=2, half_zone=7,
-                          hu_min=HU_CORTICAL_MIN):
+                          hu_min=HU_CORTICAL_MIN, coarse_step=None):
     """
     Находит на ЗДОРОВОЙ (зеркальной) кости уровень, гомологичный заданному
     уровню больной кости, по СОВПАДЕНИЮ ФОРМЫ сечения: возвращает z, при котором
@@ -297,19 +297,41 @@ def find_homologous_level(volM, axH, sig_ref, z_guess, spacing,
     Поиск ограничен окном вокруг грубого прогноза z_guess, чтобы не «зацепиться»
     за похожее по форме сечение запястья при уходе трека на кисть.
 
+    Двухэтапный поиск (NLS-104): сначала грубый шаг coarse_step по [z0, z1],
+    затем уточнение с шагом step в окне ±coarse_step вокруг грубого пика.
+    По умолчанию coarse_step = max(step * 4, 8). step остаётся «тонким» шагом
+    (обратная совместимость вызовов с step=2).
+
     Возвращает (z_best, q_best) или (None, 0.0).
     """
     z0 = max(int(axH.z_min) + half_zone, int(z_guess) - search_half)
     z1 = min(int(axH.z_max) - half_zone, int(z_guess) + search_half)
-    best_z, best_q = None, -1.0
+    if coarse_step is None:
+        coarse_step = max(int(step) * 4, 8)
+    coarse_step = max(int(coarse_step), int(step))
     nrm_ref = np.linalg.norm(sig_ref) + 1e-9
-    for z in range(z0, z1 + 1, step):
+
+    def _score(z):
         sH = zone_signature(volM, axH, z, spacing, half_zone, hu_min=hu_min)
         if sH is None:
-            continue
+            return None
         _, corr = circular_align_angle(sig_ref, sH)
-        q = float(corr.max() / (nrm_ref * (np.linalg.norm(sH) + 1e-9)))
-        if q > best_q:
+        return float(corr.max() / (nrm_ref * (np.linalg.norm(sH) + 1e-9)))
+
+    best_z, best_q = None, -1.0
+    # Stage 1 — coarse sweep
+    for z in range(z0, z1 + 1, coarse_step):
+        q = _score(z)
+        if q is not None and q > best_q:
+            best_q, best_z = q, z
+    if best_z is None:
+        return None, 0.0
+    # Stage 2 — fine refine around coarse peak
+    r0 = max(z0, int(best_z) - coarse_step)
+    r1 = min(z1, int(best_z) + coarse_step)
+    for z in range(r0, r1 + 1, step):
+        q = _score(z)
+        if q is not None and q > best_q:
             best_q, best_z = q, z
     return best_z, best_q
 

@@ -6,12 +6,15 @@ Sections:
   NLS-102 — `cross_section`: MPR cache hits vs cold (cache cleared each call).
   NLS-103 — `block_points_cont`: NumPy batch point collection vs reference Python
             for-loop append (`_block_points_cont_legacy`).
+  NLS-104 — `find_homologous_level`: two-stage coarse→fine vs dense one-stage
+            (`_find_homologous_level_legacy`).
+  GENERAL — combined speedup table (sum of section workloads).
 
-Reference set-based `rot_register_3d` and the legacy Python-loop
-`block_points_cont` body live here only (not in production module). Only
+Reference set-based `rot_register_3d`, legacy Python-loop `block_points_cont`,
+and legacy dense homologous search live here only (not in production). Only
 `radius_torsion_v3` is stubbed; **scipy and skimage are used real when present**
-(NLS-102 needs ndimage.map_coordinates; NLS-103 needs skimage morphology/measure
-for segmentation). If skimage is missing, NLS-102/103 SKIP gracefully.
+(NLS-102 needs ndimage.map_coordinates; NLS-103/104 need skimage). If skimage
+is missing, NLS-102/103/104 SKIP gracefully.
 
 Run:  python scripts/_ab_torsion_perf_check.py
 """
@@ -202,7 +205,13 @@ def run_nls101(mod) -> bool:
     print(f"  array (new)     : {t_new_total * 1e3:8.1f} ms total")
     print(f"  speedup         : {speed:6.1f}x")
     print(f"Equivalence      : {'ALL EQUAL (dphi=0, dov=0)' if all_ok else 'MISMATCH!'}\n")
-    return all_ok
+    return all_ok, {
+        "id": "NLS-101",
+        "name": "rot_register_3d (set → occupancy array)",
+        "t_ref_ms": t_ref_total * 1e3,
+        "t_new_ms": t_new_total * 1e3,
+        "speedup": speed,
+    }
 
 
 # ── NLS-102 helpers ──────────────────────────────────────────────────────────
@@ -256,7 +265,7 @@ def run_nls102(mod) -> bool:
         import scipy.ndimage  # noqa: F401 — must be real, not stubbed
     except ImportError:
         print("SKIP: scipy not installed — cross_section benchmark needs ndimage.map_coordinates\n")
-        return True
+        return True, None
 
     rng = np.random.default_rng(0)
     volume = rng.integers(-200, 1200, size=(120, 256, 256), dtype=np.int16)
@@ -304,7 +313,13 @@ def run_nls102(mod) -> bool:
     print(f"  stats  : {warm_stats}  (expected ~{n_unique} misses, ~{n_calls - n_unique} hits)")
     print(f"  speedup: {speed:6.1f}x  (warm vs cold total time)")
     print(f"\nEquivalence: cached MPR equals fresh ({equal}), same object on hit ({same_obj})\n")
-    return equal
+    return equal, {
+        "id": "NLS-102",
+        "name": "cross_section MPR cache (cold → warm)",
+        "t_ref_ms": t_cold * 1e3,
+        "t_new_ms": t_warm * 1e3,
+        "speedup": speed,
+    }
 
 
 # ── NLS-103 helpers ──────────────────────────────────────────────────────────
@@ -394,12 +409,12 @@ def run_nls103(mod) -> bool:
     if not _skimage_available():
         print("SKIP: scikit-image not installed — block_points_cont needs "
               "morphology/measure (install via `poetry install --with ml` or pip)\n")
-        return True
+        return True, None
     try:
         import scipy.ndimage  # noqa: F401 — must be real
     except ImportError:
         print("SKIP: scipy not installed — block_points_cont needs ndimage\n")
-        return True
+        return True, None
 
     nz, ny, nx = 80, 128, 128
     # Wide cylinder: fills most of the ±size_mm MPR so each slice yields many
@@ -446,7 +461,175 @@ def run_nls103(mod) -> bool:
     print(f"  legacy (Python loop): {t_legacy * 1e3:8.1f} ms total")
     print(f"  batch  (NumPy)      : {t_new * 1e3:8.1f} ms total")
     print(f"  speedup             : {speed:6.1f}x  (legacy vs new total time)\n")
-    return equal
+    return equal, {
+        "id": "NLS-103",
+        "name": "block_points_cont (Python loop → NumPy batch)",
+        "t_ref_ms": t_legacy * 1e3,
+        "t_new_ms": t_new * 1e3,
+        "speedup": speed,
+    }
+
+
+# ── NLS-104 helpers ──────────────────────────────────────────────────────────
+
+def _find_homologous_level_legacy(mod, volM, axH, sig_ref, z_guess, spacing,
+                                  search_half=130, step=2, half_zone=7,
+                                  hu_min=None):
+    """Pre-NLS-104 dense one-stage search (step only) — A/B reference."""
+    if hu_min is None:
+        hu_min = mod.HU_CORTICAL_MIN
+    z0 = max(int(axH.z_min) + half_zone, int(z_guess) - search_half)
+    z1 = min(int(axH.z_max) - half_zone, int(z_guess) + search_half)
+    best_z, best_q = None, -1.0
+    nrm_ref = np.linalg.norm(sig_ref) + 1e-9
+    for z in range(z0, z1 + 1, step):
+        sH = mod.zone_signature(volM, axH, z, spacing, half_zone, hu_min=hu_min)
+        if sH is None:
+            continue
+        _, corr = mod.circular_align_angle(sig_ref, sH)
+        q = float(corr.max() / (nrm_ref * (np.linalg.norm(sH) + 1e-9)))
+        if q > best_q:
+            best_q, best_z = q, z
+    return best_z, best_q
+
+
+def _make_peaked_bone_volume(nz=160, ny=96, nx=96, z_true=80, spacing_xy=0.5):
+    """
+    Synthetic volume: elliptical cortical ring whose eccentricity peaks at z_true.
+    Homologous search should recover z_true (or nearest step) from a signature
+    taken at that level.
+    """
+    vol = np.full((nz, ny, nx), -100, dtype=np.int16)
+    cy, cx = ny / 2.0, nx / 2.0
+    yy, xx = np.mgrid[0:ny, 0:nx]
+    for z in range(nz):
+        # eccentricity peaks at z_true (elongated ellipse), rounder away from it
+        t = abs(z - z_true) / max(z_true, nz - z_true)
+        ecc = 0.55 * (1.0 - t)  # 0 at ends, 0.55 at peak
+        a = 14.0 * (1.0 + ecc)   # semi-axis along y
+        b = 14.0 * (1.0 - ecc)   # semi-axis along x
+        ry = (yy - cy) / a
+        rx = (xx - cx) / b
+        r = np.sqrt(ry * ry + rx * rx)
+        mask = (r >= 0.75) & (r <= 1.05)
+        sl = vol[z]
+        sl[mask] = 900
+        # soft fill for hole-fill / contour stability
+        fill = r < 0.75
+        sl[fill] = 450
+    return vol
+
+
+def run_nls104(mod) -> bool:
+    print("=" * 95)
+    print("NLS-104  find_homologous_level  —  dense one-stage (legacy) vs two-stage coarse→fine")
+    print("=" * 95)
+
+    if not _skimage_available():
+        print("SKIP: scikit-image not installed — find_homologous_level needs "
+              "skimage.measure/morphology\n")
+        return True, None
+    try:
+        import scipy.ndimage  # noqa: F401
+    except ImportError:
+        print("SKIP: scipy not installed\n")
+        return True, None
+
+    z_true = 80
+    half_zone = 3  # smaller zone for faster A/B (still multi-slice)
+    search_half = 50
+    step = 2
+    spacing = (0.5, 0.5, 0.5)
+    volume = _make_peaked_bone_volume(nz=160, z_true=z_true)
+    axis = _FakeAxis(y0=volume.shape[1] / 2.0, dy=0.0,
+                     x0=volume.shape[2] / 2.0, dx=0.0,
+                     der_y=0.0, der_x=0.0,
+                     z_min=0, z_max=volume.shape[0] - 1)
+
+    mod.clear_cross_section_cache()
+    sig_ref = mod.zone_signature(volume, axis, z_true, spacing, half_zone,
+                                 hu_min=mod.HU_CORTICAL_MIN)
+    if sig_ref is None:
+        print("FAIL: could not build sig_ref at z_true (segmentation empty)\n")
+        return False, None
+
+    # Intentionally offset guess so search must walk the window
+    z_guess = z_true + 28
+    kwargs = dict(search_half=search_half, step=step, half_zone=half_zone,
+                  hu_min=mod.HU_CORTICAL_MIN)
+
+    mod.clear_cross_section_cache()
+    t0 = time.perf_counter()
+    z_leg, q_leg = _find_homologous_level_legacy(
+        mod, volume, axis, sig_ref, z_guess, spacing, **kwargs)
+    t_legacy = time.perf_counter() - t0
+
+    mod.clear_cross_section_cache()
+    t0 = time.perf_counter()
+    z_new, q_new = mod.find_homologous_level(
+        volume, axis, sig_ref, z_guess, spacing, **kwargs)
+    t_new = time.perf_counter() - t0
+
+    # Same peak expected: two-stage refine covers ±coarse_step with fine step
+    z_ok = (z_leg is not None and z_new is not None
+            and abs(int(z_leg) - int(z_new)) <= step)
+    near_true = z_new is not None and abs(int(z_new) - z_true) <= step
+    speed = t_legacy / t_new if t_new else float("inf")
+
+    # Expected call counts (approx): dense vs coarse+fine
+    z0 = max(int(axis.z_min) + half_zone, int(z_guess) - search_half)
+    z1 = min(int(axis.z_max) - half_zone, int(z_guess) + search_half)
+    coarse_step = max(step * 4, 8)
+    n_dense = len(range(z0, z1 + 1, step))
+    n_coarse = len(range(z0, z1 + 1, coarse_step))
+    n_fine = len(range(0, 2 * coarse_step + 1, step))  # upper bound ±coarse
+
+    print(f"volume {volume.shape}, z_true={z_true}, z_guess={z_guess}, "
+          f"search_half={search_half}, step={step}, coarse_step={coarse_step}")
+    print(f"approx zone_signature calls: dense≈{n_dense}, "
+          f"two-stage≈{n_coarse}+≤{n_fine}")
+    print(f"\nlegacy (dense):  z={z_leg}  q={q_leg:.4f}  {t_legacy * 1e3:8.1f} ms")
+    print(f"two-stage (new): z={z_new}  q={q_new:.4f}  {t_new * 1e3:8.1f} ms")
+    print(f"speedup:         {speed:6.1f}x")
+    print(f"Equivalence:     |z_new−z_legacy|≤step ({z_ok}); "
+          f"|z_new−z_true|≤step ({near_true})\n")
+    return z_ok and near_true, {
+        "id": "NLS-104",
+        "name": "find_homologous_level (dense → coarse+fine)",
+        "t_ref_ms": t_legacy * 1e3,
+        "t_new_ms": t_new * 1e3,
+        "speedup": speed,
+    }
+
+
+def _print_general_speedup(rows):
+    """Print combined speedup table for all tickets that reported timings."""
+    print("=" * 95)
+    print("GENERAL SPEEDUP  —  NLS-EPIC-10 performance tickets (synthetic A/B)")
+    print("=" * 95)
+    print(f"{'ticket':<10} {'component':<52} {'ref ms':>9} {'new ms':>9} {'speedup':>9}")
+    print("-" * 95)
+    t_ref_sum = t_new_sum = 0.0
+    n = 0
+    for r in rows:
+        if r is None:
+            continue
+        print(f"{r['id']:<10} {r['name']:<52} "
+              f"{r['t_ref_ms']:9.1f} {r['t_new_ms']:9.1f} {r['speedup']:8.1f}x")
+        t_ref_sum += r["t_ref_ms"]
+        t_new_sum += r["t_new_ms"]
+        n += 1
+    print("-" * 95)
+    if n == 0:
+        print("(no timed sections — all skipped)")
+        return
+    overall = t_ref_sum / t_new_sum if t_new_sum else float("inf")
+    print(f"{'TOTAL':<10} {'sum of section workloads (not full patient run)':<52} "
+          f"{t_ref_sum:9.1f} {t_new_sum:9.1f} {overall:8.1f}x")
+    print()
+    print("Note: TOTAL is sum of isolated micro-benchmarks (NLS-101..104), not wall-clock")
+    print("      of a full DICOM patient pipeline. Use main script + stopwatch for that.")
+    print()
 
 
 def main():
@@ -456,16 +639,20 @@ def main():
         pass
 
     mod = _load_module()
-    ok101 = run_nls101(mod)
-    ok102 = run_nls102(mod)
-    ok103 = run_nls103(mod)
+    ok101, m101 = run_nls101(mod)
+    ok102, m102 = run_nls102(mod)
+    ok103, m103 = run_nls103(mod)
+    ok104, m104 = run_nls104(mod)
+
+    _print_general_speedup([m101, m102, m103, m104])
 
     print("=" * 95)
-    overall = ok101 and ok102 and ok103
+    overall = ok101 and ok102 and ok103 and ok104
     print(f"OVERALL: {'PASS' if overall else 'FAIL'}  "
           f"(NLS-101 {'OK' if ok101 else 'FAIL'}, "
           f"NLS-102 {'OK' if ok102 else 'FAIL'}, "
-          f"NLS-103 {'OK' if ok103 else 'FAIL'})")
+          f"NLS-103 {'OK' if ok103 else 'FAIL'}, "
+          f"NLS-104 {'OK' if ok104 else 'FAIL'})")
     print("=" * 95)
     return 0 if overall else 1
 
