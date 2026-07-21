@@ -359,21 +359,46 @@ def rot_register_3d(ptsA, ptsH, gv=1.0, coarse=3.0, prior=None, window=50.0):
     оставляя только физичные изменения угла.
 
     Возвращает (phi, overlap). overlap — встроенная мера достоверности.
+
+    Реализация: вместо Python-`set` больная кость размечается в 3D булевом
+    массиве занятости (bbox округлённых воксельных ключей), а перекрытие на
+    каждом угле считается векторной индексацией NumPy. Числовой путь ключей
+    (`np.round(x / gv).astype(int)`) и обработка OOB (промах) совпадают с
+    прежней set-реализацией (A/B: scripts/_ab_rot_register_check.py).
     """
     if len(ptsA) < 50 or len(ptsH) < 50:
         return 0.0, 0.0
-    occ = set(zip(np.round(ptsA[:, 0] / gv).astype(int),
-                  np.round(ptsA[:, 1] / gv).astype(int),
-                  np.round(ptsA[:, 2] / gv).astype(int)))
+
+    sA_i = np.round(ptsA[:, 0] / gv).astype(int)
+    uA_i = np.round(ptsA[:, 1] / gv).astype(int)
+    vA_i = np.round(ptsA[:, 2] / gv).astype(int)
+
+    s_min, s_max = int(sA_i.min()), int(sA_i.max())
+    u_min, u_max = int(uA_i.min()), int(uA_i.max())
+    v_min, v_max = int(vA_i.min()), int(vA_i.max())
+
+    occupied = np.zeros((s_max - s_min + 1,
+                         u_max - u_min + 1,
+                         v_max - v_min + 1), dtype=bool)
+    occupied[sA_i - s_min, uA_i - u_min, vA_i - v_min] = True
+
     sH = ptsH[:, 0]; uH = ptsH[:, 1]; vH = ptsH[:, 2]
+    n = len(sH)
+    sH_i = np.round(sH / gv).astype(int)          # s не вращается — считаем один раз
+    s_ok = (sH_i >= s_min) & (sH_i <= s_max)       # in-bounds по оси s постоянен
 
     def overlap(phi):
         th = np.radians(phi); ct, st = np.cos(th), np.sin(th)
         u2 = uH * ct - vH * st; v2 = uH * st + vH * ct
-        keys = zip(np.round(sH / gv).astype(int),
-                   np.round(u2 / gv).astype(int),
-                   np.round(v2 / gv).astype(int))
-        return sum(1 for k in keys if k in occ) / len(sH)
+        ui = np.round(u2 / gv).astype(int)
+        vi = np.round(v2 / gv).astype(int)
+        in_bounds = (s_ok
+                     & (ui >= u_min) & (ui <= u_max)
+                     & (vi >= v_min) & (vi <= v_max))
+        hits = np.zeros(n, dtype=bool)
+        idx = np.nonzero(in_bounds)[0]
+        hits[idx] = occupied[sH_i[idx] - s_min, ui[idx] - u_min, vi[idx] - v_min]
+        return int(hits.sum()) / n
 
     grid = np.arange(-180, 180, coarse) if prior is None \
         else np.arange(prior - window, prior + window, coarse)
