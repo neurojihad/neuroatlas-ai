@@ -101,6 +101,56 @@ project prefix. Link each ticket to [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 
 ## Epic: NLS-EPIC-09 — Access model / RBAC (IAM service)
 
+New dedicated hexagonal service `src/iam/` (port 8004): users, roles, resources, role-resource links.
+DB RBAC is the **Phase-4 fine-grained** authorization layer atop Keycloak JWT realm roles. Cross-links
+EPIC-03 (Identity & audit), EPIC-07 (Observability), and NLS-104 / NLS-506 (Redis).
+
+**Decisions:** D1 dedicated `src/iam/` service · D2 ULID PKs (`usr_`/`rol_`/`res_`, `RoleResource` composite PK) ·
+D3 extend `UserORM` with nullable `role_id` FK (no second users table) · D4 `AsyncSession` (subclass `SqlAlchemyUnitOfWork`) ·
+D5 ORM models in `common/adapters/database/models/` so housekeeper Alembic autogenerate sees them.
+
+| Ticket | Title | Size | Status | ARCHITECTURE.md ref |
+|--------|-------|------|--------|---------------------|
+| NLS-901 | Add DatabaseException adapter-layer exception | S | Open | §12 |
+| NLS-902 | db_measure metrics decorator + CrudOperation enum | M | Open | §12 — x-link NLS-701 |
+| NLS-903 | Cursor pagination helper + ext_str util | S | Open | §12 |
+| NLS-904 | IAM service scaffold (`src/iam/`) | M | Open | §5 Phase 4, §12 |
+| NLS-905 | RBAC domain entities | S | Open | §5 Phase 4, §12 |
+| NLS-906 | AccessModelRepository + AccessModelUnitOfWork ports | M | Open | §12 |
+| NLS-907 | RBAC domain commands + queries | L | Open | §12 |
+| NLS-908 | IAM domain/tasks.py orchestration stub | S | Open | §12 |
+| NLS-909 | RBAC ORM models + extend UserORM | M | Open | §5, §12 |
+| NLS-910 | Alembic migration 0003_rbac | M | Open | §4 Housekeeper |
+| NLS-911 | SQLAlchemyAccessModelRepository (postgres.py) | L | Open | §12 |
+| NLS-912 | SQLAlchemy IAM Unit of Work | S | Open | §12 |
+| NLS-913 | Redis cache adapter + wiring | M | Open | §6 Redis — x-link NLS-104/506 |
+| NLS-914 | Outbound gateways/ HTTP client scaffold | S | Open | §12 |
+| NLS-915 | email/ notification adapter scaffold | S | Open | §12 |
+| NLS-916 | IAM HTTP adapter (router, schemas, deps) | M | Open | §12 |
+| NLS-917 | Fake in-memory access model (repo + UoW) | M | Open | §12 |
+| NLS-918 | Domain unit tests against fakes + conftest | M | Open | §12 |
+| NLS-919 | Smoke test on FakeUnitOfWork (no Postgres) | S | Open | §12 |
+| NLS-920 | SQLAlchemy adapter integration tests (marked, Postgres) | M | Open | §12 |
+| NLS-921 | IAM Docker/compose/Makefile wiring | M | Open | §12 |
+| NLS-922 | ADR + docs update (id strategy, UserORM, RBAC schema) | S | Open | §5, §6 |
+
+**Dependency-ordered milestones (M-A → M-E):**
+
+- **M-A — Shared foundations:** NLS-901, NLS-902, NLS-903, NLS-904 (all parallel, no deps)
+- **M-B — Domain core:** NLS-905 → NLS-906 → NLS-907 → NLS-908; NLS-917 after 906; NLS-918 after 907/917
+- **M-C — Persistence:** NLS-909 → NLS-910 → NLS-911 → NLS-912; NLS-920 after 910/911/912
+- **M-D — Edges:** NLS-916 + (NLS-913 / NLS-914 / NLS-915 parallel) + NLS-919
+- **M-E — Ship:** NLS-921 + NLS-922
+
+Critical path: 901/902/903/904 → 905 → 906 → 907 → 911 → 916 → 919.
+
+**Open grooming questions:** confirm port 8004; `LinkRoleResource` idempotency (no-op vs `InvalidOperation`);
+whether IAM consumes roles from Keycloak via gateways or is the source of truth for resource policies.
+
+---
+
+## Epic: NLS-EPIC-09 — Access model / RBAC (IAM service)
+
 New dedicated hexagonal service `src/iam/` (port 8004): users, roles, resources, and role-resource
 links. DB RBAC is the Phase-4 fine-grained authorization layer atop Keycloak JWT realm roles.
 Cross-links EPIC-03 (Identity & audit), EPIC-07 (Observability), and NLS-104 / NLS-506 (Redis).
@@ -146,6 +196,41 @@ Ready-made Jira creation script: [`scripts/jira/create_rbac_tasks.ps1`](../../sc
 - **M-C Persistence:** NLS-910 → NLS-911 → NLS-912; NLS-917
 - **M-D Edges:** NLS-913, NLS-914, NLS-915, NLS-916
 - **M-E Tests/ops/docs:** NLS-918, NLS-919, NLS-920, NLS-921, NLS-922
+
+---
+
+## Epic: NLS-EPIC-10 — Radius torsion registration performance
+
+Performance initiative for [`scripts/radius_torsion_registration.py`](../../scripts/radius_torsion_registration.py):
+make the comparative radius-torsion measurement (`rot_register_3d` and its pipeline) faster
+**without changing clinical measurement results**. One separate ticket per optimization step,
+in priority order.
+
+**Actual Jira keys** (auto-assigned; distinct from the *suggested* `NLS-1xx` keys reused as
+plan-refs in EPIC-01): epic **NLS-100**, stories **NLS-101 … NLS-105**. Plan-refs use the
+`NLS-RTR-*` namespace to avoid confusion.
+
+**Kid-friendly problem:** two Lego bones — a sick arm bone and a healthy one flipped like in a
+mirror. Spin the healthy bone around its long axis until it looks most like the sick bone; that
+spin angle is the excess twist. `rot_register_3d` does the spinning-and-checking. It is slow
+because it uses a Python `set` + a per-spin loop; faster is a 3D bool occupancy "sticker board" +
+vectorized rotate/index. Pipeline: seeds → track bones → `find_homologous_level` (matching heights)
+→ `rot_register_3d` per level → excess twist = distal − proximal angle (`twist_profile`).
+
+**Cross-cutting acceptance criteria (all tickets):** PATIENTS presets stay the same
+(within ~0.1° / identical φ for same inputs) when DICOM + `radius_torsion_v3` available; otherwise
+synthetic A/B for `rot_register_3d`; minimal diffs (no unrelated pipeline refactor); document
+before/after timing where relevant.
+
+| Ref | Jira | Priority | Title | Status |
+|-----|------|----------|-------|--------|
+| NLS-RTR-01 | NLS-101 | 1 (highest) | Occupancy-array (vectorized) rewrite of `rot_register_3d` (attempted then rolled back — re-implement) | Open |
+| NLS-RTR-02 | NLS-102 | 2 | Cache `cross_section` / MPR slices in registration pipeline | Open |
+| NLS-RTR-03 | NLS-103 | 3 | Speed up `block_points_cont` with NumPy batch point collection | Open |
+| NLS-RTR-04 | NLS-104 | 4 | Two-stage `find_homologous_level` (coarse z search then refine) | Open |
+| NLS-RTR-05 | NLS-105 | 5 | `twist_profile`: skip unconstrained ±180° search when prior/PCA seed exists | Open |
+
+Suggested order = priority order (NLS-101 first). NLS-101 is the hot path and unblocks the biggest win.
 
 ---
 
@@ -223,7 +308,7 @@ See [`docs/jira/README.md`](README.md) for API setup, CLI commands, and the **`s
 Jira key mapping (plan ref to Jira key): [`backlog-keys.md`](backlog-keys.md).
 
 1. Create project **NeuroAtlas** (or your prefix).
-2. Create epics `NLS-EPIC-01` … `NLS-EPIC-08`.
+2. Create epics `NLS-EPIC-01` … `NLS-EPIC-09`.
 3. Create stories from the tables above (copy **Title** as summary, **Ticket** as issue key if allowed).
 4. Paste **ARCHITECTURE.md ref** into description + link to §12.
 5. Update **Status** column here when tickets move (optional local tracker).
