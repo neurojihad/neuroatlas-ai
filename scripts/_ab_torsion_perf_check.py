@@ -75,7 +75,7 @@ def _install_import_stubs():
 def _load_module():
     _install_import_stubs()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    return importlib.import_module("radius_torsion_registration")
+    return importlib.import_module("radius_torsion_registration_nov")
 
 
 # ── NLS-101 helpers ──────────────────────────────────────────────────────────

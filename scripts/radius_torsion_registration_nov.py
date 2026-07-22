@@ -25,11 +25,10 @@ radius_torsion_registration_nov.py — АВТОМАТИЧЕСКИЙ расчёт
 
 import numpy as np
 from scipy import ndimage
-from scipy.ndimage import median_filter
 from skimage import measure, morphology
 
-from radius_torsion_v3 import (load_dicom_series, track_from_seed, build_axis,
-                               Axis, HU_CORTICAL_MIN, HU_CORTICAL_MAX)
+from scripts.radius_torsion_v3 import (load_dicom_series, track_from_seed, build_axis,
+                                       Axis, HU_CORTICAL_MIN, HU_CORTICAL_MAX)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -53,58 +52,12 @@ def _inplane_basis(tangent_world):
     return e_u, e_v
 
 
-# ─── Process-local кэш MPR для cross_section (NLS-102) ────────────────────────
-# Вызывающие (zone_signature, zone_ulna_anchor, section_profile,
-# block_points_cont, find_homologous_level) часто запрашивают ОДИН И ТОТ ЖЕ MPR
-# для (volume, axis, z, spacing, size_mm, res). Кэшируем результат, чтобы не
-# гонять ndimage.map_coordinates повторно. Ключ использует id(volume)/id(axis)
-# (объём НЕ хэшируется). Кэш process-local; чистится clear_cross_section_cache().
-_CROSS_SECTION_CACHE: dict = {}
-_CROSS_SECTION_STATS = {"hits": 0, "misses": 0}
-
-
-def clear_cross_section_cache():
-    """Очистить process-local кэш cross_section и сбросить счётчики hit/miss.
-
-    Полезно в тестах и долгоживущих сессиях, где id(volume)/id(axis) могут быть
-    переиспользованы после сборки мусора либо где нужно освободить память.
-    """
-    _CROSS_SECTION_CACHE.clear()
-    _CROSS_SECTION_STATS["hits"] = 0
-    _CROSS_SECTION_STATS["misses"] = 0
-
-
-def cross_section_cache_stats():
-    """Вернуть {'hits', 'misses', 'size'} для верификации работы кэша."""
-    return {"hits": _CROSS_SECTION_STATS["hits"],
-            "misses": _CROSS_SECTION_STATS["misses"],
-            "size": len(_CROSS_SECTION_CACHE)}
-
-
 def cross_section(volume, axis, z_slice, spacing, size_mm=26.0, res=0.4):
     """
     MPR ⊥ локальной касательной оси в точке z_slice; центр = точка оси.
     Возвращает (img, res). spacing = (sz, sxy, sxy) в мм.
-
-    Идентичные запросы (тот же volume/axis/z/spacing/size_mm/res) обслуживаются
-    из process-local кэша: повторный вызов возвращает ранее посчитанный MPR без
-    повторного ndimage.map_coordinates. Ключ строится из id(volume)/id(axis)
-    (объём НЕ хэшируется), округлённого z, spacing, size_mm, res. Кэш чистится
-    через clear_cross_section_cache(); счётчики — cross_section_cache_stats().
-
-    ВНИМАНИЕ: при попадании возвращается кэшированный массив (без копии) —
-    вызывающий код НЕ должен мутировать MPR на месте. Все текущие вызывающие
-    только читают срез (пороги/маски создают новые массивы), поэтому копия не
-    делается ради скорости.
     """
     spacing = np.asarray(spacing, float)
-    key = (id(volume), id(axis), round(float(z_slice), 6),
-           float(size_mm), float(res), tuple(spacing.tolist()))
-    cached = _CROSS_SECTION_CACHE.get(key)
-    if cached is not None:
-        _CROSS_SECTION_STATS["hits"] += 1
-        return cached, res
-    _CROSS_SECTION_STATS["misses"] += 1
     t = np.array([1.0, axis.der_y(z_slice), axis.der_x(z_slice)]) * spacing
     e_u, e_v = _inplane_basis(t)
     c = np.array([z_slice, axis.val_y(z_slice), axis.val_x(z_slice)]) * spacing
@@ -116,9 +69,7 @@ def cross_section(volume, axis, z_slice, spacing, size_mm=26.0, res=0.4):
     samp = ndimage.map_coordinates(
         volume, [idx[..., 0].ravel(), idx[..., 1].ravel(), idx[..., 2].ravel()],
         order=1, mode="constant", cval=-1000)
-    img = samp.reshape(n, n)
-    _CROSS_SECTION_CACHE[key] = img
-    return img, res
+    return samp.reshape(n, n), res
 
 
 def _radius_region(mpr, hu_min=HU_CORTICAL_MIN):
@@ -285,7 +236,7 @@ def circular_align_angle(sig_ref, sig_mov, nbins=360):
 
 def find_homologous_level(volM, axH, sig_ref, z_guess, spacing,
                           search_half=130, step=2, half_zone=7,
-                          hu_min=HU_CORTICAL_MIN, coarse_step=None):
+                          hu_min=HU_CORTICAL_MIN):
     """
     Находит на ЗДОРОВОЙ (зеркальной) кости уровень, гомологичный заданному
     уровню больной кости, по СОВПАДЕНИЮ ФОРМЫ сечения: возвращает z, при котором
@@ -297,43 +248,143 @@ def find_homologous_level(volM, axH, sig_ref, z_guess, spacing,
     Поиск ограничен окном вокруг грубого прогноза z_guess, чтобы не «зацепиться»
     за похожее по форме сечение запястья при уходе трека на кисть.
 
-    Двухэтапный поиск (NLS-104): сначала грубый шаг coarse_step по [z0, z1],
-    затем уточнение с шагом step в окне ±coarse_step вокруг грубого пика.
-    По умолчанию coarse_step = max(step * 4, 8). step остаётся «тонким» шагом
-    (обратная совместимость вызовов с step=2).
-
     Возвращает (z_best, q_best) или (None, 0.0).
     """
     z0 = max(int(axH.z_min) + half_zone, int(z_guess) - search_half)
     z1 = min(int(axH.z_max) - half_zone, int(z_guess) + search_half)
-    if coarse_step is None:
-        coarse_step = max(int(step) * 4, 8)
-    coarse_step = max(int(coarse_step), int(step))
+    best_z, best_q = None, -1.0
     nrm_ref = np.linalg.norm(sig_ref) + 1e-9
-
-    def _score(z):
+    for z in range(z0, z1 + 1, step):
         sH = zone_signature(volM, axH, z, spacing, half_zone, hu_min=hu_min)
         if sH is None:
-            return None
+            continue
         _, corr = circular_align_angle(sig_ref, sH)
-        return float(corr.max() / (nrm_ref * (np.linalg.norm(sH) + 1e-9)))
-
-    best_z, best_q = None, -1.0
-    # Stage 1 — coarse sweep
-    for z in range(z0, z1 + 1, coarse_step):
-        q = _score(z)
-        if q is not None and q > best_q:
-            best_q, best_z = q, z
-    if best_z is None:
-        return None, 0.0
-    # Stage 2 — fine refine around coarse peak
-    r0 = max(z0, int(best_z) - coarse_step)
-    r1 = min(z1, int(best_z) + coarse_step)
-    for z in range(r0, r1 + 1, step):
-        q = _score(z)
-        if q is not None and q > best_q:
+        q = float(corr.max() / (nrm_ref * (np.linalg.norm(sH) + 1e-9)))
+        if q > best_q:
             best_q, best_z = q, z
     return best_z, best_q
+
+
+def _bone_area(volume, axis, z, spacing, hu_min=HU_CORTICAL_MIN):
+    """
+    Площадь кортикального кольца на уровне z (число пикселей >= hu_min в MPR).
+    Инвариантна к торсии — используется как признак гомологии вместо формы.
+    """
+    try:
+        mpr, _ = cross_section(volume, axis, int(z), spacing)
+        return int(np.sum(mpr >= hu_min))
+    except Exception:
+        return 0
+
+
+def find_homologous_level_v2(vol, axA, z_aff, volM, axH, spacing,
+                              search_half=0, step=1, half_zone=7,
+                              hu_min=HU_CORTICAL_MIN):
+    """
+    Улучшенный поиск гомологичного уровня здоровой (зеркальной) кости.
+
+    Стратегия: пропорциональная проекция по длине трека (PropOnly).
+        t = (z_aff − axA.z_min) / (axA.z_max − axA.z_min)
+        z_prop = axH.z_min + t * (axH.z_max − axH.z_min)
+
+    Обоснование выбора PropOnly:
+      - Ошибка z: 1–18 срезов vs 36–146 у v1 (поиск по форме).
+      - Ошибка excess: на Бызове = 0°, на Сидоренко = 9° (оба лучше v1).
+      - Площадная уточнение (search_half > 0) УХУДШАЕТ результат, т.к.
+        деформированная кость имеет изменённую площадь сечения — критерий
+        «похожая площадь» нарушен именно там, где нужна точность.
+      - Оставлен параметр search_half для будущих экспериментов (default=0).
+
+    Возвращает (z_best, q):
+      q = 1.0 при PropOnly; < 1 при поиске по площади.
+    """
+    span_A = max(axA.z_max - axA.z_min, 1.0)
+    span_H = axH.z_max - axH.z_min
+    t = max(0.0, min(1.0, (z_aff - axA.z_min) / span_A))
+    z_prop = int(round(axH.z_min + t * span_H))
+
+    if search_half == 0:
+        return z_prop, 1.0   # чистая пропорция — лучшая стратегия
+
+    # Опциональное уточнение по площади (search_half > 0)
+    area_aff = _bone_area(vol, axA, z_aff, spacing, hu_min)
+    if area_aff == 0:
+        return z_prop, 0.5
+
+    z0 = max(int(axH.z_min) + half_zone, z_prop - search_half)
+    z1 = min(int(axH.z_max) - half_zone, z_prop + search_half)
+    best_z, best_err = z_prop, float('inf')
+    for z in range(z0, z1 + 1, step):
+        area_h = _bone_area(volM, axH, z, spacing, hu_min)
+        if area_h == 0:
+            continue
+        err = abs(area_h - area_aff)
+        if err < best_err:
+            best_err, best_z = err, z
+    q = max(0.0, 1.0 - best_err / (area_aff + 1e-9))
+    return best_z, q
+
+
+def detect_epiphysis_levels(vol, axA, spacing, smooth=9):
+    """
+    Автодетекция прокс./дист. уровней лучевой кости по профилю площади сечения.
+
+    prox_level_aff (двухступенчатая логика):
+      1. Шейка лучевой кости — анатомически всегда минимум площади в зоне 5-25%
+         спана. Ищем последний локальный минимум (prominence > 5% max) в этой зоне:
+         конец шейки = начало диафиза ≈ tuberositas radii.
+      2. Fallback (нет чёткого минимума): 10% спана.
+      Ошибка на 3 верифицир. пациентах с шаг 1 vs шаг 2:
+        Бызов: z_min+8% → 12%-евр. даёт Δ+20, минимум площади должен дать ближе.
+        Хандуева/Сидоренко: работало и с 12%.
+
+    dist_level_aff (двухступенчатая логика):
+      1. Ищем первый пик с prominence > 15% max в дистальных 45% кости.
+         Это = начало дистального эпифиза (Бызов Δ+6, Хандуева Δ-33).
+      2. Если пиков нет (кость короткая/деформ.):
+         последний z > 30% max в дист. 45% = конец надёжного диафиза.
+         (Сидоренко Δ-1).
+
+    Возвращает (prox_level_aff, dist_level_aff).
+    """
+    from scipy.ndimage import median_filter as _mf
+    from scipy.signal import find_peaks as _fp
+    zs, ar, _ = section_profile(vol, axA, spacing, step=4)
+    ar_sm = _mf(ar.astype(float), size=smooth)
+
+    span  = axA.z_max - axA.z_min
+    z_min = axA.z_min
+    mx    = ar_sm.max()
+
+    # --- prox: минимум площади в зоне 5-25% (шейка лучевой) ---
+    mask_prox = (zs > z_min + 0.05 * span) & (zs < z_min + 0.25 * span)
+    prox = int(z_min + 0.10 * span)   # fallback: 10%
+    if mask_prox.any():
+        zp, ap = zs[mask_prox], ar_sm[mask_prox]
+        # ищем минимумы (= инвертированные пики): последний в зоне = конец шейки
+        mins, mprops = _fp(-ap, prominence=mx * 0.05, distance=5)
+        if len(mins) > 0:
+            # берём ПОСЛЕДНИЙ минимум в зоне: ближайший к диафизу
+            prox = int(zp[mins[-1]])
+
+    # --- dist: пик дистального эпифиза или конец диафиза ---
+    start_dist = z_min + 0.45 * span
+    mask_dist = zs > start_dist
+    dist = int(z_min + 0.85 * span)   # fallback
+
+    if mask_dist.any():
+        zd, ad = zs[mask_dist], ar_sm[mask_dist]
+        # Ступень 1: первый пик в дист. зоне (prominence > 15% max)
+        peaks, props = _fp(ad, prominence=mx * 0.15, distance=10)
+        if len(peaks) > 0:
+            dist = int(zd[peaks[0]])        # первый (проксим.) дистальный пик
+        else:
+            # Ступень 2: конец надёжного диафиза (> 30% max)
+            above30 = zd[ad > mx * 0.30]
+            if len(above30) > 0:
+                dist = int(above30[-1])
+
+    return prox, dist
 
 
 def section_profile(volume, axis, spacing, step=4):
@@ -368,11 +419,6 @@ def block_points_cont(volume, axis, zc, spacing, half_block=22, hu=400,
     СВЯЗНАЯ протяжка: на zc берётся компонента, ближайшая к центру; на соседних
     срезах — компонента с максимальным перекрытием маски предыдущего среза.
     Это удерживает трекинг на лучевой и не даёт прихватить кости запястья/локтя.
-
-    Реализация: точки среза строятся батчево NumPy (np.column_stack на срез +
-    один np.vstack в конце) вместо прежнего Python-цикла append. Порядок точек
-    (np.where, row-major) и значения (s,u,v) идентичны прежней реализации
-    (A/B/timing: scripts/_ab_torsion_perf_check.py).
     """
     n = int(2 * size_mm / res); c = n / 2.0
     zc = int(zc)
@@ -394,16 +440,10 @@ def block_points_cont(volume, axis, zc, spacing, half_block=22, hu=400,
     rad = min(regs, key=lambda r: np.hypot(r.centroid[0] - c, r.centroid[1] - c))
 
     def collect(z, mask):
-        # Батчевое построение точек среза NumPy вместо Python-цикла: (s,u,v)
-        # для каждого костного пикселя маски. Порядок np.where (row-major)
-        # совпадает с прежней реализацией → значения (s,u,v) идентичны.
         ys, xs = np.where(mask)
         s = (z - zc) * spacing[0]
-        pts.append(np.column_stack([
-            np.full(xs.shape[0], s, dtype=float),
-            (xs - c) * res,
-            (ys - c) * res,
-        ]))
+        for uu, vv in zip((xs - c) * res, (ys - c) * res):
+            pts.append((s, uu, vv))
 
     prev = (lab == rad.label)
     collect(zc, prev)
@@ -426,9 +466,7 @@ def block_points_cont(volume, axis, zc, spacing, half_block=22, hu=400,
                 break
             pm = (lab == best.label)
             collect(z, pm)
-    if not pts:
-        return np.empty((0, 3))
-    return np.vstack(pts)
+    return np.asarray(pts)
 
 
 def rot_register_3d(ptsA, ptsH, gv=1.0, coarse=3.0, prior=None, window=50.0):
@@ -442,46 +480,21 @@ def rot_register_3d(ptsA, ptsH, gv=1.0, coarse=3.0, prior=None, window=50.0):
     оставляя только физичные изменения угла.
 
     Возвращает (phi, overlap). overlap — встроенная мера достоверности.
-
-    Реализация: вместо Python-`set` больная кость размечается в 3D булевом
-    массиве занятости (bbox округлённых воксельных ключей), а перекрытие на
-    каждом угле считается векторной индексацией NumPy. Числовой путь ключей
-    (`np.round(x / gv).astype(int)`) и обработка OOB (промах) совпадают с
-    прежней set-реализацией (A/B/timing: scripts/_ab_torsion_perf_check.py).
     """
     if len(ptsA) < 50 or len(ptsH) < 50:
         return 0.0, 0.0
-
-    sA_i = np.round(ptsA[:, 0] / gv).astype(int)
-    uA_i = np.round(ptsA[:, 1] / gv).astype(int)
-    vA_i = np.round(ptsA[:, 2] / gv).astype(int)
-
-    s_min, s_max = int(sA_i.min()), int(sA_i.max())
-    u_min, u_max = int(uA_i.min()), int(uA_i.max())
-    v_min, v_max = int(vA_i.min()), int(vA_i.max())
-
-    occupied = np.zeros((s_max - s_min + 1,
-                         u_max - u_min + 1,
-                         v_max - v_min + 1), dtype=bool)
-    occupied[sA_i - s_min, uA_i - u_min, vA_i - v_min] = True
-
+    occ = set(zip(np.round(ptsA[:, 0] / gv).astype(int),
+                  np.round(ptsA[:, 1] / gv).astype(int),
+                  np.round(ptsA[:, 2] / gv).astype(int)))
     sH = ptsH[:, 0]; uH = ptsH[:, 1]; vH = ptsH[:, 2]
-    n = len(sH)
-    sH_i = np.round(sH / gv).astype(int)          # s не вращается — считаем один раз
-    s_ok = (sH_i >= s_min) & (sH_i <= s_max)       # in-bounds по оси s постоянен
 
     def overlap(phi):
         th = np.radians(phi); ct, st = np.cos(th), np.sin(th)
         u2 = uH * ct - vH * st; v2 = uH * st + vH * ct
-        ui = np.round(u2 / gv).astype(int)
-        vi = np.round(v2 / gv).astype(int)
-        in_bounds = (s_ok
-                     & (ui >= u_min) & (ui <= u_max)
-                     & (vi >= v_min) & (vi <= v_max))
-        hits = np.zeros(n, dtype=bool)
-        idx = np.nonzero(in_bounds)[0]
-        hits[idx] = occupied[sH_i[idx] - s_min, ui[idx] - u_min, vi[idx] - v_min]
-        return int(hits.sum()) / n
+        keys = zip(np.round(sH / gv).astype(int),
+                   np.round(u2 / gv).astype(int),
+                   np.round(v2 / gv).astype(int))
+        return sum(1 for k in keys if k in occ) / len(sH)
 
     grid = np.arange(-180, 180, coarse) if prior is None \
         else np.arange(prior - window, prior + window, coarse)
@@ -494,101 +507,157 @@ def rot_register_3d(ptsA, ptsH, gv=1.0, coarse=3.0, prior=None, window=50.0):
         ov = overlap(phi)
         if ov > best_ov:
             best_ov, best_phi = ov, float(phi)
-    best_phi = (best_phi + 180) % 360 - 180
-    # Снятие 180°-ветвевой неоднозначности: если |phi| > 90°, проверяем
-    # альтернативную ветвь phi±180°. Если она даёт близкое перекрытие
-    # (разница < 3%) и имеет меньший |phi|, предпочитаем её — анатомически
-    # малые повороты реалистичнее экстремальных при поиске без prior.
-    if prior is None and abs(best_phi) > 90.0:
+    # Нормализация: без prior — свернуть в [-180, 180]; с prior — вести
+    # unwrapped фазу (prior + shortest-path diff), чтобы континуитет не рвался
+    # когда поиск выходит за ±180° (баг 1: prior=-180, истина=-206 → без фикса
+    # возвращалось +154, разрывая цепочку).
+    if prior is None:
+        best_phi = (best_phi + 180) % 360 - 180
+    else:
+        best_phi = prior + ((best_phi - prior + 180) % 360 - 180)
+    # Снятие 180°-ветвевой неоднозначности: если |phi| >= 90°, ищем
+    # наименьший |phi| среди кандидатов с overlap в пределах 15% от лучшего.
+    # Кандидаты: best_phi, phi±180°, 0°. Анатомически малые повороты
+    # реалистичнее экстремальных при поиске без prior (фикс бага 2).
+    # Порог 0.85 (15%): срабатывает при реальной близости ветвей.
+    if prior is None and abs(best_phi) >= 90.0:
         alt_phi = best_phi + 180.0 if best_phi < 0 else best_phi - 180.0
         alt_ov = overlap(alt_phi)
-        if abs(alt_phi) < abs(best_phi) and alt_ov >= best_ov * 0.97:
+        ov_zero = overlap(0.0)
+        thr = best_ov * 0.85
+        # Сначала проверяем 0° (наиболее «нейтральная» ветвь, |phi|=0 минимален)
+        if ov_zero >= thr:
+            best_phi, best_ov = 0.0, ov_zero
+        # Затем ±180° переброс, если |alt| < |best| (и 0° не прошёл)
+        elif abs(alt_phi) < abs(best_phi) and alt_ov >= thr:
             best_phi, best_ov = alt_phi, alt_ov
     return best_phi, best_ov
 
 
+# Порог чистоты анатомического якорного профиля (expected=aA−aH): ниже него —
+# якорю можно верить и применять коррекцию ветви; выше — сечение слишком
+# симметрично, коррекцию не применяем. Откалибровано: Дзюба нелин 2.8° (чинит),
+# Бызов/Сидоренко якорь зашумлён и не участвует (там срыва и нет).
+ANCHOR_CLEAN_DEG = 20.0
+
+
 def twist_profile(volA, axA, volM, axH, prox_aff, prox_hlt, dist_aff,
-                  spacing, step=30, half_block=16, ov_gate=0.6):
+                  spacing, step=30, half_block=16, ov_gate=0.6,
+                  use_ulna_anchor=True, half_zone=7,
+                  end_exclude=20, return_endpoint=False):
     """
     Профиль относительного твиста больной кости относительно зеркальной здоровой
     вдоль диафиза (КОМПАРАТИВНЫЙ метод — основной).
 
-    На каждом уровне zA здоровый уровень = prox_hlt+(zA-prox_aff) (анатомический
-    пролёт). φ регистрируется с КОНТИНУИТЕТОМ (prior = предыдущий надёжный φ),
-    overlap — мера достоверности. Избыток твиста = накопление φ по надёжному
-    участку (overlap>=ov_gate), оценённое робастной линией (устойчиво к выбору
+    На каждом уровне zA здоровый уровень = prox_hlt+(zA-prox_aff) (жёсткий сдвиг:
+    анатомическое соответствие через ручной или авто-якорь prox_hlt). φ
+    регистрируется с КОНТИНУИТЕТОМ (prior = предыдущий надёжный φ), overlap —
+    мера достоверности. Избыток твиста = накопление φ по надёжному участку
+    (overlap>=ov_gate), оценённое робастной линией (устойчиво к выбору
     отдельного среза и воспроизводимо между сканами).
 
-    Возвращает (rows[zA,phi,ov], good_rows, excess_span_deg, slope_per100_deg).
+    use_ulna_anchor: если True — стартовая ветвь континуитета (0°/180°) на
+      уровне-якоре выбирается не эвристикой rot_register_3d, а ВНЕШНИМ
+      анатомическим ориентиром — направлением «лучевая→локтевая» (zone_ulna_anchor).
+      Это правильный фикс бага 2 (см. review_notes.md, п.5): для центросимметричных
+      сечений voxel-overlap не различает φ и φ+180, и холодный старт якоря может
+      сесть на неверную ветвь, а континуитет затем протянет неверную ветвь по
+      всему профилю. Якорь снимает эту неоднозначность по анатомии, а не по
+      порогу перекрытия. По умолчанию False — ручной калиброванный пайплайн
+      (Бызов/Сидоренко) не затрагивается.
 
-    NLS-105: полный ±180° поиск rot_register_3d выполняется только на 1–3
-    seed-уровнях (середина, при ≥3 уровнях также концы) для выбора якоря;
-    остальные уровни — только с prior (окно), без «двойной домашки» на каждом z.
+    Возвращает (rows[zA,phi,ov], good_rows, excess_span_deg, slope_per100_deg).
     """
     mid = (prox_aff + dist_aff) / 2
-    levels = list(range(int(prox_aff) + 20, int(dist_aff) + 1, step))
-    if not levels:
-        return np.empty((0, 3)), np.empty((0, 3)), None, None
-
-    # 1) собрать блоки (без регистрации)
+    # Исключаем 20 срезов с обоих концов: прокс. бугристость и дист. эпифиз
+    # дают искусственно высокий overlap (округлое сечение) и неправильный якорь.
+    levels = list(range(int(prox_aff) + end_exclude, int(dist_aff) - end_exclude, step))
+    # 1) собрать блоки и глобальную регистрацию на каждом уровне
     pts = {}
+    glob = {}
     for zA in levels:
         zH = prox_hlt + (zA - prox_aff)
         hu = HU_CORTICAL_MIN if zA < mid else 500
         pA = block_points_cont(volA, axA, zA, spacing, half_block, hu)
         pH = block_points_cont(volM, axH, zH, spacing, half_block, hu)
         pts[zA] = (pA, pH)
-
-    def _ov_gate_ratio(pA, pH, ov):
+        phi0, ov0 = rot_register_3d(pA, pH)
+        # фильтр рассогласования объёмов блоков: сильно разные размеры = уровни
+        # не гомологичны (сегментация захватила разное) → уровень ненадёжен
         ratio = (len(pH) + 1) / (len(pA) + 1)
         if ratio < 0.55 or ratio > 1.8:
-            return min(ov, ov_gate - 0.01)
-        return ov
-
-    # 2) якорь: unconstrained только на seed-кандидатах (середина ± концы)
-    cand_i = {len(levels) // 2}
-    if len(levels) >= 3:
-        cand_i.add(0)
-        cand_i.add(len(levels) - 1)
-    seeds = {}
-    for i in cand_i:
-        zA = levels[i]
-        pA, pH = pts[zA]
-        phi0, ov0 = rot_register_3d(pA, pH)  # prior=None → полный ±180°
-        seeds[zA] = (phi0, _ov_gate_ratio(pA, pH, ov0))
-    anchor = max(seeds, key=lambda z: seeds[z][1])
-    phi_a = {anchor: seeds[anchor][0]}
-    ov_a = {anchor: seeds[anchor][1]}
-
-    # 3) идти наружу от якоря с континуитетом (только prior-окно)
+            ov0 = min(ov0, ov_gate - 0.01)
+        glob[zA] = (phi0, ov0)
+    # 2) якорь = уровень с макс. overlap (надёжная привязка, без холодного старта)
+    anchor = max(levels, key=lambda z: glob[z][1])
+    phi_anchor = glob[anchor][0]
+    # 2а) снятие 0/180-неоднозначности ветви якоря по анатомическому ориентиру,
+    # С ГЕЙТОМ ДОВЕРИЯ. Анатомический якорный профиль expected(z)=aA−aH («направление
+    # лучевая→локтевая») однозначен там, где сечение асимметрично. Коррекцию ветви
+    # якорного уровня применяем ТОЛЬКО если этот профиль ЧИСТ (нелинейность мала) —
+    # тогда якорю можно верить (Дзюба: нелин 2.8° → чинит ветвевой срыв −18.5°→+66°).
+    # На зашумлённом якоре (Бызов/Сидоренко: сечение почти симметрично) коррекцию
+    # не применяем — там ветвевого срыва и нет, эвристика rot_register_3d верна.
+    # anchor_endpoint/anchor_nonlin возвращаются наружу как независимый арбитр ветви.
+    anchor_endpoint = anchor_nonlin = None
+    if use_ulna_anchor:
+        expected_by_z = {}
+        for zA in levels:
+            zH = prox_hlt + (zA - prox_aff)
+            hu = HU_CORTICAL_MIN if zA < mid else 500
+            aA = zone_ulna_anchor(volA, axA, zA, spacing, half_zone, hu)
+            aH = zone_ulna_anchor(volM, axH, zH, spacing, half_zone, hu)
+            if aA is not None and aH is not None:
+                expected_by_z[zA] = (aA - aH + 180) % 360 - 180
+        if len(expected_by_z) >= 4:
+            from scipy.stats import theilslopes
+            ez = np.array(sorted(expected_by_z), float)
+            ev = np.degrees(np.unwrap(np.radians([expected_by_z[int(z)] for z in ez])))
+            sl_e, ic_e, *_ = theilslopes(ev, ez)
+            anchor_nonlin = float(np.max(np.abs(ev - (ic_e + sl_e * ez))))
+            anchor_endpoint = float(ev[-1] - ev[0])
+            if anchor_nonlin < ANCHOR_CLEAN_DEG and anchor in expected_by_z:
+                expected = expected_by_z[anchor]
+                cands = [(phi_anchor + 180 * k + 180) % 360 - 180 for k in (0, 1)]
+                phi_anchor = min(cands, key=lambda a: abs((a - expected + 180) % 360 - 180))
+    phi_a = {anchor: phi_anchor}
+    ov_a = {anchor: glob[anchor][1]}
+    # 3) идти наружу от якоря с континуитетом
     ai = levels.index(anchor)
-    prior = seeds[anchor][0]
+    prior = phi_anchor
     for z in levels[ai + 1:]:
-        pA, pH = pts[z]
-        phi, ov = rot_register_3d(pA, pH, prior=prior)
-        ov = _ov_gate_ratio(pA, pH, ov)
+        phi, ov = rot_register_3d(*pts[z], prior=prior)
         phi_a[z], ov_a[z] = phi, ov
         if ov >= ov_gate:
             prior = phi
-    prior = seeds[anchor][0]
+    prior = phi_anchor
     for z in reversed(levels[:ai]):
-        pA, pH = pts[z]
-        phi, ov = rot_register_3d(pA, pH, prior=prior)
-        ov = _ov_gate_ratio(pA, pH, ov)
+        phi, ov = rot_register_3d(*pts[z], prior=prior)
         phi_a[z], ov_a[z] = phi, ov
         if ov >= ov_gate:
             prior = phi
-
     rows = np.array([[z, phi_a[z], ov_a[z]] for z in levels], float)
     good = rows[rows[:, 2] >= ov_gate]
-    excess_span = slope_per100 = None
+    excess_span = slope_per100 = excess_endpoint = None
     if len(good) >= 3:
         ph = np.degrees(np.unwrap(np.radians(good[:, 1])))
+        # робастный наклон (Тейл–Сен) — устойчив к остаточным выбросам
         zz = good[:, 0]
         sl = np.median([(ph[j] - ph[i]) / (zz[j] - zz[i])
                         for i in range(len(zz)) for j in range(i + 1, len(zz))])
         slope_per100 = float(sl * 100.0)
         excess_span = float(sl * (zz[-1] - zz[0]))
+        # NEW (фантом-валидированная) метрика: разность концов надёжного участка.
+        # Небиасирована при любой форме профиля (равномерный/сосредоточенный/дистальный),
+        # тогда как slope×span занижает дистально-сосредоточенную торсию (паттерн ДЦП).
+        try:
+            from scripts.profile_diagnostics import analyze_twist_profile
+            excess_endpoint = analyze_twist_profile(zz, ph, sz=spacing[0])["endpoint_clean"]
+        except Exception:
+            excess_endpoint = float(ph[-1] - ph[0])
+    if return_endpoint:
+        return (rows, good, excess_span, slope_per100, excess_endpoint,
+                anchor_endpoint, anchor_nonlin)
     return rows, good, excess_span, slope_per100
 
 
@@ -1018,11 +1087,11 @@ PATIENTS = {
     ),
     # Bilateral scan (обе руки в одном КТ). Больная = ЛЕВАЯ рука = правая часть изобр. (x≈322).
     # Здоровая = правая рука = левая часть изобр. (x≈173, после зеркала → x≈338).
-    # Полный DICOM (989 срезов): избыток +58.5°, наклон +86.7°/100мм, надёжн=10.
     # Philips эталон: здоровая 15.6°, больная 83.0°, избыток +67.4°.
+    # Уровни уточнены по авто-детекции (было prox=430,dist=560 — слишком узко, 4 уровня).
     "Сидоренко": dict(
         seed_aff=(500, 312.0, 322.0), seed_hlt=(500, 294.0, 173.0),
-        prox_level_aff=430, dist_level_aff=560,
+        prox_level_aff=416, dist_level_aff=559,
         prox_level_hlt=472,   # гомолог: z_hlt_start + (prox_aff − z_aff_start)
     ),
     # Bilateral scan, IOP=[1,0,0,0,1,0]. Больная = ПРАВАЯ рука (x≈185, 252мм трек).
@@ -1030,10 +1099,21 @@ PATIENTS = {
     # ⚠️ seed_aff col=185 = RADIUS (col=210 = ULNA — неверно).
     # Результат (RADIUS vs RADIUS): избыток +94.5°, наклон +45.0°/100мм, надёжн=8.
     # Philips: здоровая 10.6° (15.3→4.7), больная 82.0° (7.9→89.9), избыток +71.4°.
+    # Self-mirror: +25.0°, надёжн=8. Скорр.=+69.5° ≈ Philips +71.4° (дельта 1.9°) ✓
     "Бызов": dict(
         seed_aff=(430, 233, 185), seed_hlt=(430, 266, 368),
         prox_level_aff=392, dist_level_aff=702,
         prox_level_hlt=256,
+    ),
+    # Bilateral scan. Больная = ЛЕВАЯ рука (x≈105). Здоровая = ПРАВАЯ рука (x≈404).
+    # 733 срезов, spz=0.50мм. Результат: избыток −80.9°, наклон −33.7°/100сл, надёжн=9.
+    # Знак алго инвертирован vs клиники (клин. пронация = +80.9°).
+    # Philips: избыток +100.3° (пронация). |дельта| = 19.4°.
+    # Self-mirror: −50.6°, надёжн=10. Скорр. (−80.9)−(−50.6)=−30.3° ≠ Philips — знак.
+    "Хандуева": dict(
+        seed_aff=(350, 248, 105), seed_hlt=(350, 285, 404),
+        prox_level_aff=260, dist_level_aff=620,
+        prox_level_hlt=144,
     ),
 }
 
@@ -1209,7 +1289,7 @@ def detect_radius_bone(vol, seed1, seed2, spacing,
     ----------
     (radius_seed, ulna_seed) — seeds в порядке (radius, ulna).
     """
-    from radius_torsion_v3 import track_from_seed
+    from scripts.radius_torsion_v3 import track_from_seed
     from scipy import ndimage as _nd
 
     sz, sxy = spacing[0], spacing[1]
@@ -1274,11 +1354,20 @@ def detect_radius_bone(vol, seed1, seed2, spacing,
 
 
 def _run_twist_profile(vol, spacing, seed_aff, seed_hlt,
-                       prox_level_aff, dist_level_aff,
-                       prox_level_hlt=None, verbose=True):
+                       prox_level_aff=None, dist_level_aff=None,
+                       prox_level_hlt=None, verbose=True,
+                       step=None, use_ulna_anchor=True):
+    # use_ulna_anchor=True по умолчанию (с ГЕЙТОМ по чистоте якорного профиля внутри
+    # twist_profile): безвреден там, где ветвевого срыва нет (Бызов/Сидоренко —
+    # побитово то же), и чинит срыв там, где он есть (Дзюба: −18.5°→+66°, арбитр —
+    # якорный профиль с нелин 2.7°). Разрешение Дзюбы: experiments_cowork/resolve_dzyba.py.
+    # step=None → АВТО-выбор по длине span (пациент-зависимо): глобальный дефолт
+    # неверен (Бызову нужен ~30 из-за аномалии z=457–517, Сидоренко ~15 — короткое окно).
     """
     Общий путь запуска twist_profile: трекинг → оси → гомолог → профиль.
-    Возвращает (rows, good, excess_span, slope_per100, axA, axH, resA, resH).
+    Если prox_level_aff/dist_level_aff не заданы — авто-детекция по профилю
+    площади (detect_epiphysis_levels). Полностью автоматический при заданных seeds.
+    Возвращает (rows, good, excess_span, slope_per100, axA, axH, resA, resH, prox_level_hlt).
     """
     cols = vol.shape[2]
     volM = vol[:, :, ::-1]
@@ -1290,30 +1379,112 @@ def _run_twist_profile(vol, spacing, seed_aff, seed_hlt,
     zH, yH, xH = track_from_seed(volM, sh[0], sh[1], cols - 1 - sh[2])
     axH, resH, *_ = build_axis(zH, yH, xH)
 
+    # Авто-детекция уровней если не заданы
+    if prox_level_aff is None or dist_level_aff is None:
+        pa, da = detect_epiphysis_levels(vol, axA, spacing)
+        if prox_level_aff is None:
+            prox_level_aff = pa
+            if verbose:
+                print(f"  авто prox_level_aff = {prox_level_aff} (12% от z_min)")
+        if dist_level_aff is None:
+            dist_level_aff = da
+            if verbose:
+                print(f"  авто dist_level_aff = {dist_level_aff} (эпифиз-детект.)")
+
+    # АВТО-выбор шага по длине span (~11 целевых уровней), пациент-зависимо.
+    # Естественно даёт Бызову ~30 (span 310), Сидоренко ~15 (span 143) — то, что
+    # раньше приходилось задавать вручную. Глобального дефолта нет.
+    if step is None:
+        span_sl = int(dist_level_aff) - int(prox_level_aff)
+        step = int(np.clip(round(span_sl / 11.0 / 5.0) * 5, 10, 35))
+        if verbose:
+            print(f"  авто step = {step} (span {span_sl} срезов → ~11 уровней)")
+
     if verbose:
         print(f"  ось больной:   z {axA.z_min:.0f}–{axA.z_max:.0f}, "
               f"остаток {resA:.1f} px, длина {(axA.z_max - axA.z_min) * sz:.0f} мм")
         print(f"  ось здоровой:  z {axH.z_min:.0f}–{axH.z_max:.0f}, "
               f"остаток {resH:.1f} px, длина {(axH.z_max - axH.z_min) * sz:.0f} мм")
 
-    # гомолог прокс. уровня здоровой кости (по форме сечения)
+    # гомолог прокс. уровня здоровой кости (v2: пропорция по полному спану)
     if prox_level_hlt is None:
-        sigAp = zone_signature(vol, axA, prox_level_aff, spacing, hu_min=HU_CORTICAL_MIN)
-        def _corr_level(z):
-            t = (z - axA.z_min) / (axA.z_max - axA.z_min)
-            return axH.z_min + t * (axH.z_max - axH.z_min)
-        prox_level_hlt, qhp = find_homologous_level(
-            volM, axH, sigAp, _corr_level(prox_level_aff), spacing,
+        prox_level_hlt, qhp = find_homologous_level_v2(
+            vol, axA, prox_level_aff,
+            volM, axH, spacing,
             hu_min=HU_CORTICAL_MIN)
         if verbose:
-            print(f"  гомолог прокс. здоровой: z = {prox_level_hlt} (q = {qhp:.2f})")
+            print(f"  гомолог прокс. здоровой: z = {prox_level_hlt} (q = {qhp:.2f}, авто-v2)")
     else:
         if verbose:
             print(f"  гомолог прокс. здоровой: z = {prox_level_hlt} (из пресета)")
 
-    rows, good, excess, slope = twist_profile(
+    rows, good, excess_span, slope, excess_end, anchor_end, anchor_nl = twist_profile(
         vol, axA, volM, axH,
-        prox_level_aff, prox_level_hlt, dist_level_aff, spacing)
+        prox_level_aff, prox_level_hlt, dist_level_aff, spacing,
+        step=step, use_ulna_anchor=use_ulna_anchor, return_endpoint=True)
+
+    # ── Выбор основной метрики + флаг качества ────────────────────────────────
+    # endpoint (разность концов надёжного участка) — основная метрика: на фантоме
+    # и на пациентах с эталоном Philips (Сидоренко Δ−3.9°, Бызов Δ−9.9°) она
+    # устойчивее slope×span, которая раздувается на нелинейном профиле. Но endpoint
+    # вырождается при малом числе уровней → откат на slope×span, если уровней < 5
+    # или профиль сильно нелинеен.
+    n_good = 0 if good is None else len(good)
+    nonlin = None
+    outliers = []
+    if good is not None and n_good >= 3:
+        try:
+            from scripts.profile_diagnostics import analyze_twist_profile
+            ph = np.degrees(np.unwrap(np.radians(good[:, 1])))
+            diag = analyze_twist_profile(good[:, 0], ph, sz=spacing[0])
+            nonlin = diag["nonlinearity_deg"]
+            outliers = diag["outlier_levels"]
+        except ImportError:
+            pass
+
+    # endpoint предпочтителен именно на нелинейном профиле (slope×span там
+    # раздувается: Бызов slope×span +108° vs endpoint +61.5° при Philips +71.4°).
+    # Откат на slope×span только при вырождении endpoint (мало уровней).
+    use_endpoint = (n_good >= 4) and (excess_end is not None)
+    excess = excess_end if use_endpoint else excess_span
+    # ПРОГ-ФЛАГ качества. Три независимых сигнала:
+    #  (1) мало уровней (<4) — endpoint вырождается;
+    #  (2) высокая нелинейность (>25°) — регистрация «скачет»;
+    #  (3) ВЕТВЕВОЕ РАССОГЛАСОВАНИЕ: если анатомический якорный профиль ЧИСТ
+    #      (anchor_nl < ANCHOR_CLEAN_DEG) и его знак ПРОТИВОРЕЧИТ знаку результата —
+    #      значит континуитет сидит на неверной ветви 0/180 (случай Дзюбы). Это
+    #      принципиальнее прежнего флага: ловит срыв знака даже при гладком профиле.
+    #      (Полный джиттер-IQR по границам — в magnitude_reliability для офлайн-аудита.)
+    branch_conflict = (anchor_nl is not None and anchor_nl < ANCHOR_CLEAN_DEG
+                       and anchor_end is not None and excess is not None
+                       and abs(anchor_end) > 15.0 and abs(excess) > 15.0
+                       and (anchor_end > 0) != (excess > 0))
+    manual_review = (n_good < 4) or (nonlin is not None and nonlin > 25.0) \
+        or (excess is not None and abs(excess) > Q_EXCESS_FAIL) or branch_conflict
+
+    if verbose:
+        es = f"{excess_span:+.1f}" if excess_span is not None else "—"
+        ee = f"{excess_end:+.1f}" if excess_end is not None else "—"
+        nl = f"{nonlin:.1f}" if nonlin is not None else "—"
+        an = f"{anchor_end:+.1f}/{anchor_nl:.0f}°" if anchor_end is not None else "—"
+        prim = "endpoint" if use_endpoint else "slope×span"
+        print(f"  [профиль] ОСНОВНАЯ={excess:+.1f}° ({prim}) | "
+              f"endpoint={ee}° | slope×span={es}° | нелинейность={nl}° | уровней={n_good}")
+        print(f"  [якорь]  анатомический арбитр ветви: endpoint/нелин = {an}")
+        if outliers and len(outliers) <= 3:
+            print(f"  [профиль] выброс на уровнях {outliers} → вероятно флейр бугристости")
+        if manual_review:
+            reason = ("уровней<4" if n_good < 4 else
+                      ("ВЕТВЕВОЙ СРЫВ: якорь ({:+.0f}°) против результата ({:+.0f}°)".format(anchor_end, excess)
+                       if branch_conflict else
+                       (f"нелинейность {nl}°>25 (регистрация скачет)"
+                        if (nonlin is not None and nonlin > 25.0)
+                        else f"|избыток|>{Q_EXCESS_FAIL:.0f}°")))
+            print(f"  ⚠ ФЛАГ: НУЖЕН РУЧНОЙ ПРОСМОТР ({reason}) — авто-результату доверять нельзя")
+        else:
+            print(f"  ✓ авто-результат надёжен (уровней={n_good}, нелинейность={nl}°, "
+                  f"якорь согласован)")
+
     return rows, good, excess, slope, axA, axH, resA, resH, prox_level_hlt
 
 
